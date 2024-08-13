@@ -13,4 +13,7 @@ type Variables = {
   user: User
 }
 
-interface User {}
+interface User {
+  id: number
+  email: string
+}
