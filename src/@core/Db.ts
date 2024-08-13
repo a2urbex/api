@@ -10,6 +10,7 @@ export default class Db {
     this.mysqlPool = mysql.createPool({
       host: this.opts.host,
       user: this.opts.user,
+      database: this.opts.database,
       password: this.opts.password,
       connectionLimit: this.opts.connectionLimit,
       port: this.opts.port,
@@ -26,8 +27,10 @@ export default class Db {
       if (!conn) throw new HTTPException(500, { message: 'Unable to connect to database' })
 
       const query = await conn.query(request, params)
-      if (formatter === 0) return query?.[0]
-      return query
+      const data = query[0]
+
+      if (formatter === 0) return data?.[0]
+      return data
     } catch (err) {
       console.log(err)
       throw new HTTPException(500, { message: 'SQL query error' })
