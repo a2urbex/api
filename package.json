@@ -4,6 +4,7 @@
     "prod": "bun run src/index.ts"
   },
   "dependencies": {
+    "bun": "^1.1.22",
     "hono": "^4.2.9",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.6.0"
