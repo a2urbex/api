@@ -9,5 +9,9 @@ const mysql = {
 
 export default {
   mysql: mysql,
-  secret: process.env.ACCESS_TOKEN_SECRET || '',
+  password: {
+    secret: process.env.PASSWORD_SECRET,
+    salt: process.env.PASSWORD_SALT ? parseInt(process.env.PASSWORD_SALT) : 10,
+  },
+  jwtSecret: process.env.JWT_SECRET || '',
 }

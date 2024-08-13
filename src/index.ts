@@ -12,3 +12,8 @@ start()
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath('/api')
 app.route('/auth', auth)
+
+export default {
+  port: 3300,
+  fetch: app.fetch,
+}
