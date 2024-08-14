@@ -14,6 +14,11 @@ const user = {
     const sql = `INSERT INTO user (email, password, firstname, lastname, roles, last_active_at) VALUES (?, ?, ?, ?, "[]", NOW())`
     return db.query(sql, [email, password, firstname, lastname])
   },
+
+  updatePassword: (id: number, password: string) => {
+    const sql = `UPDATE user SET password = ? WHERE id = ?`
+    return db.query(sql, [password, id])
+  },
 }
 
 export default user

@@ -3,8 +3,9 @@ import { HTTPException } from 'hono/http-exception'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcrypt'
 
-import dao from 'dao'
+import utils from '@core/utils'
 import config from 'config'
+import dao from 'dao'
 
 const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -23,6 +24,7 @@ auth.post('/login', async (c) => {
 
   return c.json({ token: createJwt(exist.id, email, keepMeLoggedIn ? 3600 * 365 : 3600) })
 })
+
 auth.post('/register', async (c) => {
   const { email, password, name, lastname } = await c.req.json()
 
@@ -33,6 +35,35 @@ auth.post('/register', async (c) => {
   const add = await dao.user.add(email, hash, name, lastname)
 
   return c.json({ token: createJwt(add.insertId, email) })
+})
+
+auth.post('/password/forgot', async (c) => {
+  const { email } = await c.req.json()
+
+  const exist = await dao.user.exist(email)
+  if (!exist) throw new HTTPException(404, { message: "User doesn't exist" })
+
+  const token = utils.generateRandomString(24)
+  const date = new Date()
+  date.setDate(date.getDate() + 1)
+
+  await dao.token.add('password_reset', token, date, exist.id)
+
+  return c.json({ token })
+})
+
+auth.post('/password/reset', async (c) => {
+  const { token, password } = await c.req.json()
+
+  const get = await dao.token.get('password_reset', token)
+  if (!get) throw new HTTPException(404, { message: 'Invalid token' })
+
+  const hash = await bcrypt.hash(config.password.secret + password, config.password.salt)
+  await dao.user.updatePassword(get.user_id, hash)
+
+  await dao.token.delete(get.id)
+
+  return c.json({})
 })
 
 export default auth
