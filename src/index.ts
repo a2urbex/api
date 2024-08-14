@@ -21,7 +21,7 @@ app.use(async (c, next) => {
 
   try {
     const data = jwt.verify(token, config.jwtSecret, { clockTolerance: 10 })
-    c.set('user', { id: data.id, email: data.email })
+    c.set('user', { id: data.id, email: data.email, roles: data.roles })
   } catch (e: any) {
     throw new HTTPException(401, { message: 'Invalid token' })
   }

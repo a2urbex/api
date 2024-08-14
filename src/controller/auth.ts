@@ -9,8 +9,8 @@ import dao from 'dao'
 
 const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-const createJwt = (id: number, email: string, duration: number = 3600) => {
-  return jwt.sign({ id, email }, config.jwtSecret, { expiresIn: duration })
+const createJwt = (id: number, email: string, roles = [], duration: number = 3600) => {
+  return jwt.sign({ id, email, roles }, config.jwtSecret, { expiresIn: duration })
 }
 
 auth.post('/login', async (c) => {
@@ -23,7 +23,7 @@ auth.post('/login', async (c) => {
   const match = await bcrypt.compare(config.password.secret + password, exist.password)
   if (!match) throw new HTTPException(401, { message: 'Invalid password' })
 
-  return c.json({ token: createJwt(exist.id, email, keepMeLoggedIn ? 3600 * 365 : 3600) })
+  return c.json({ token: createJwt(exist.id, email, JSON.parse(exist.roles), keepMeLoggedIn ? 3600 * 365 : 3600) })
 })
 
 auth.post('/register', async (c) => {
