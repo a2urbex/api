@@ -6,7 +6,7 @@ const user = {
   },
 
   exist: (email: string) => {
-    const sql = `SELECT id, email, password FROM user WHERE email = ?`
+    const sql = `SELECT id, email, password, old FROM user WHERE email = ?`
     return db.query(sql, [email], 0)
   },
 
@@ -15,9 +15,9 @@ const user = {
     return db.query(sql, [email, password, firstname, lastname])
   },
 
-  updatePassword: (id: number, password: string) => {
-    const sql = `UPDATE user SET password = ? WHERE id = ?`
-    return db.query(sql, [password, id])
+  updatePassword: (id: number, password: string, old: number = 0) => {
+    const sql = `UPDATE user SET password = ?, old = ? WHERE id = ?`
+    return db.query(sql, [password, old, id])
   },
 }
 

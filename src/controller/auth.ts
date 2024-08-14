@@ -18,6 +18,7 @@ auth.post('/login', async (c) => {
 
   const exist = await dao.user.exist(email)
   if (!exist) throw new HTTPException(404, { message: "User doesn't exist" })
+  if (exist.old) return c.json({ old: true })
 
   const match = await bcrypt.compare(config.password.secret + password, exist.password)
   if (!match) throw new HTTPException(401, { message: 'Invalid password' })
