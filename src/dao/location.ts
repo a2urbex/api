@@ -29,6 +29,7 @@ const location = {
 
     if (filters.countries?.length) {
       WHERE += ' AND l.country_id IN (?)'
+      params.push(filters.countries)
     }
 
     if (filters.sources?.length) {
