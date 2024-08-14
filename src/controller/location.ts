@@ -47,7 +47,7 @@ const getLocations = async (user: User, filters: SearchFilters = {}) => {
   return { count: count.total, list }
 }
 
-location.post('/:page{[0-9]+}', async (c) => {
+location.post('/p/:page{[0-9]+}', async (c) => {
   const user = c.get('user')
   const page = parseInt(c.req.param('page'))
   const { string, categories, countries, sources } = await c.req.json()
