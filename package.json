@@ -4,8 +4,9 @@
     "prod": "bun run src/index.ts"
   },
   "dependencies": {
-    "bun": "^1.1.22",
     "bcrypt": "^5.1.1",
+    "bun": "^1.1.22",
+    "crypto": "^1.0.1",
     "hono": "^4.2.9",
     "jsonwebtoken": "^9.0.2",
     "mysql2": "^3.6.0"

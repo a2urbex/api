@@ -15,4 +15,12 @@ export default {
     salt: process.env.PASSWORD_SALT ? parseInt(process.env.PASSWORD_SALT) : 10,
   },
   jwtSecret: process.env.JWT_SECRET || '',
+  pageSize: process.env.PAGE_SIZE ? parseInt(process.env.PAGE_SIZE) : 50,
+  encryption: {
+    method: process.env.ENCRYPT_METHOD,
+    iv: process.env.IV_SECRET,
+    location: process.env.LOCATION_SECRET,
+    favorite: process.env.FAVORITE_SECRET,
+    user: process.env.USER_SECRET,
+  },
 }
