@@ -23,7 +23,7 @@ auth.post('/login', async (c) => {
   const match = await bcrypt.compare(config.password.secret + password, exist.password)
   if (!match) throw new HTTPException(401, { message: 'Invalid password' })
 
-  return c.json({ token: createJwt(exist.id, email, JSON.parse(exist.roles), keepMeLoggedIn ? 3600 * 365 : 3600) })
+  return c.json({ token: createJwt(exist.id, email, JSON.parse(exist.roles), keepMeLoggedIn ? 3600 * 24 * 365 : 3600) })
 })
 
 auth.post('/register', async (c) => {
