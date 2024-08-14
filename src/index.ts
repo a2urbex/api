@@ -10,7 +10,7 @@ import location from 'controller/location'
 
 start()
 
-const app = new Hono<{ Bindings: Bindings; Variables: Variables }>().basePath('/api')
+const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 app.route('/auth', auth)
 
 app.use(async (c, next) => {
