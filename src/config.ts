@@ -8,6 +8,7 @@ const mysql = {
 }
 
 export default {
+  port: process.env.PORT,
   mysql: mysql,
   password: {
     secret: process.env.PASSWORD_SECRET,

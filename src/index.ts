@@ -3,7 +3,6 @@ import { HTTPException } from 'hono/http-exception'
 import jwt from 'jsonwebtoken'
 
 import { start } from '@core/init'
-import dao from 'dao'
 import config from 'config'
 
 import auth from 'controller/auth'
@@ -35,6 +34,6 @@ app.get('/test', async (c) => {
 })
 
 export default {
-  port: 3300,
+  port: config.port,
   fetch: app.fetch,
 }
