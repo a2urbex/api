@@ -35,14 +35,16 @@ const getLocations = async (user: User, filters: SearchFilters = {}) => {
     delete filters.sources
   }
 
+  const count = await dao.location.getCount(filters)
   const list = await dao.location.getList(filters)
-  const out = list.map((item: any) => {
+
+  list.forEach((item: any) => {
     item.id = utils.encrypt(item.id.toString(), 'location')
     item.fids = item.fids?.split(',').map((fid: number) => utils.encrypt(fid.toString(), 'favorite'))
-    return item
+    if (!item.fids) item.fids = []
   })
 
-  return out
+  return { count: count.total, list }
 }
 
 location.post('/:page{[0-9]+}', async (c) => {

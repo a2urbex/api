@@ -7,8 +7,9 @@ const location = {
     db = db1
   },
 
-  getList: (filters: SearchFilters) => {
+  getFilters: (filters: SearchFilters) => {
     let WHERE = ''
+    let LIMIT = ''
     const params: any = []
 
     if (filters.string?.length) {
@@ -35,10 +36,15 @@ const location = {
       params.push(filters.sources)
     }
 
-    let LIMIT = ''
     if (filters.page) {
       LIMIT += `LIMIT ${config.pageSize * (filters.page - 1)}, ${config.pageSize}`
     }
+
+    return [WHERE, params, LIMIT]
+  },
+
+  getList: (filters: SearchFilters) => {
+    const [WHERE, params, LIMIT] = location.getFilters(filters)
 
     const sql = `
       SELECT l.id, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor, GROUP_CONCAT(fl.favorite_id) fids
@@ -51,6 +57,14 @@ const location = {
     `
 
     return db.query(sql, params)
+  },
+
+  getCount: (filters: SearchFilters) => {
+    const [WHERE, params] = location.getFilters(filters)
+
+    const sql = `SELECT COUNT(id) total FROM location l WHERE 1 ${WHERE}`
+
+    return db.query(sql, params, 0)
   },
 }
 
