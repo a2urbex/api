@@ -18,3 +18,12 @@ interface User {
   email: string
   roles: string[]
 }
+
+interface SearchFilters {
+  string?: string
+  categories?: number[]
+  countries?: number[]
+  sources?: number[]
+  users?: number[]
+  page?: number
+}
