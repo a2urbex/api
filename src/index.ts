@@ -6,6 +6,7 @@ import { start } from '@core/init'
 import config from 'config'
 
 import auth from 'controller/auth'
+import location from 'controller/location'
 
 start()
 
@@ -29,9 +30,7 @@ app.use(async (c, next) => {
   return next()
 })
 
-app.get('/test', async (c) => {
-  return c.json({ test: true })
-})
+app.route('/location', location)
 
 export default {
   port: config.port,

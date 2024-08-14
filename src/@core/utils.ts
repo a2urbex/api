@@ -9,6 +9,13 @@ const utils = {
     email: (str: string) => /^[^@]+@[^@]+\.[^@]+$/.test(str),
     password: (str: string) => str.length >= 8,
   },
+
+  isAdmin: (user: User) => {
+    return user.roles.includes('ROLE_ADMIN')
+  },
+  isSuperUser: (user: User) => {
+    return user.roles.includes('ROLE_SUPERUSER') || utils.isAdmin(user)
+  },
 }
 
 export default utils
