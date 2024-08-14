@@ -26,13 +26,19 @@ auth.post('/login', async (c) => {
 })
 
 auth.post('/register', async (c) => {
-  const { email, password, name, lastname } = await c.req.json()
+  const { email, password, firstname, lastname } = await c.req.json()
+
+  const verify1 = utils.validator.email(email)
+  if (!verify1) throw new HTTPException(400, { message: 'Invalid email' })
+
+  const verify2 = utils.validator.password(password)
+  if (!verify2) throw new HTTPException(400, { message: 'Invalid password' })
 
   const exist = await dao.user.exist(email)
   if (exist) throw new HTTPException(409, { message: 'User already exist' })
 
   const hash = await bcrypt.hash(config.password.secret + password, config.password.salt)
-  const add = await dao.user.add(email, hash, name, lastname)
+  const add = await dao.user.add(email, hash, firstname, lastname)
 
   return c.json({ token: createJwt(add.insertId, email) })
 })
@@ -54,6 +60,9 @@ auth.post('/password/forgot', async (c) => {
 
 auth.post('/password/reset', async (c) => {
   const { token, password } = await c.req.json()
+
+  const verify = utils.validator.password(password)
+  if (!verify) throw new HTTPException(400, { message: 'Invalid password' })
 
   const get = await dao.token.get('password_reset', token)
   if (!get) throw new HTTPException(404, { message: 'Invalid token' })
