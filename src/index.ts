@@ -11,6 +11,20 @@ import location from 'controller/location'
 start()
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+app.use('*', async (c, next) => {
+  c.header('Access-Control-Allow-Origin', '*')
+  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
+  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+
+  if (c.req.method === 'OPTIONS') {
+    // Respond to preflight requests immediately
+    return c.text('', 204)
+  }
+
+  await next()
+})
+
 app.route('/auth', auth)
 
 app.use(async (c, next) => {
