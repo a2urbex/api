@@ -8,20 +8,20 @@ const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 location.get('/filter', async (c) => {
   const user = c.get('user')
   const out: any = {
-    category: {},
-    country: {},
+    categories: {},
+    countries: {},
   }
 
   const countryRaw = await dao.country.getList()
-  countryRaw.forEach((item: any) => (out.country[item.id] = item.name))
+  countryRaw.forEach((item: any) => (out.countries[item.id] = item.name))
 
   const categoryRaw = await dao.category.getList()
-  categoryRaw.forEach((item: any) => (out.category[item.id] = item.name))
+  categoryRaw.forEach((item: any) => (out.categories[item.id] = item.name))
 
   if (utils.isSuperUser(user)) {
-    out.source = {}
+    out.sources = {}
     const sourceRaw = await dao.source.getList()
-    sourceRaw.forEach((item: any) => (out.source[item.name] = item.name))
+    sourceRaw.forEach((item: any) => (out.sources[item.name] = item.name))
   }
 
   return c.json(out)
