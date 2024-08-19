@@ -37,6 +37,11 @@ const location = {
       params.push(filters.sources)
     }
 
+    if (filters.favoriteId) {
+      WHERE += ' AND fl.favorite_id = ?'
+      params.push(filters.favoriteId)
+    }
+
     if (filters.page) {
       LIMIT += `LIMIT ${config.pageSize * (filters.page - 1)}, ${config.pageSize}`
     }
@@ -80,7 +85,7 @@ const location = {
   getCount: (filters: SearchFilters) => {
     const [WHERE, params] = location.getFilters(filters)
 
-    const sql = `SELECT COUNT(id) total FROM location l WHERE 1 ${WHERE}`
+    const sql = `SELECT COUNT(id) total FROM location l LEFT JOIN favorite_location fl ON fl.location_id = l.id WHERE 1 ${WHERE}`
 
     return db.query(sql, params, 0)
   },

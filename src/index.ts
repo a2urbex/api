@@ -10,6 +10,7 @@ import config from 'config'
 import auth from 'controller/auth'
 import location from 'controller/location'
 import account from 'controller/account'
+import favorite from 'controller/favorite'
 
 start()
 
@@ -58,6 +59,7 @@ app.use(async (c, next) => {
 
 app.route('/location', location)
 app.route('/account', account)
+app.route('/favorite', favorite)
 
 export default {
   port: config.port,

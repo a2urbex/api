@@ -26,4 +26,5 @@ interface SearchFilters {
   sources?: number[]
   users?: number[]
   page?: number
+  favoriteId?: number
 }

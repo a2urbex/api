@@ -2,31 +2,9 @@ import { Hono } from 'hono'
 
 import dao from 'dao'
 import utils from '@core/utils'
+import locationService from 'service/location'
 
 const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
-
-const getLocations = async (user: User, filters: SearchFilters = {}) => {
-  if (!utils.isSuperUser(user)) {
-    const friendRaw = await dao.friend.getUserFriends(user.id)
-    const friends = friendRaw.map((item: any) => item.friend_id)
-    filters.users = [user.id, ...friends]
-    delete filters.sources
-  }
-
-  const count = await dao.location.getCount(filters)
-  const list = await dao.location.getList(filters, user.id)
-
-  return { count: count.total, list: list.map((item: any) => formatLocation(item)) }
-}
-
-const formatLocation = (item: any) => {
-  item.id = utils.encrypt(item.id.toString(), 'location')
-  item.fids = item.fids?.split(',').map((fid: number) => utils.encrypt(fid.toString(), 'favorite'))
-  item.image = utils.getImageUrl(item.image)
-  if (!item.fids) item.fids = []
-
-  return item
-}
 
 location.get('/filter', async (c) => {
   const user = c.get('user')
@@ -55,7 +33,7 @@ location.post('/p/:page{[0-9]+}', async (c) => {
   const page = parseInt(c.req.param('page'))
   const { string, categories, countries, sources } = await c.req.json()
 
-  const data = await getLocations(user, { string, categories, countries, sources, page })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources, page })
   return c.json(data)
 })
 
@@ -63,7 +41,7 @@ location.post('/map', async (c) => {
   const user = c.get('user')
   const { string, categories, countries, sources } = await c.req.json()
 
-  const data = await getLocations(user, { string, categories, countries, sources })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources })
   return c.json(data)
 })
 
@@ -73,7 +51,7 @@ location.get('/:id', async (c) => {
   const id = parseInt(utils.decrypt(encryptedId, 'location'))
 
   const item = await dao.location.get(id, user.id)
-  return c.json(formatLocation(item))
+  return c.json(locationService.formatLocation(item))
 })
 
 export default location
