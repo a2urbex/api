@@ -56,7 +56,7 @@ location.post('/p/:page{[0-9]+}', async (c) => {
   return c.json(data)
 })
 
-location.post('/', async (c) => {
+location.post('/map', async (c) => {
   const user = c.get('user')
   const { string, categories, countries, sources } = await c.req.json()
 
