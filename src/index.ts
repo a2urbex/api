@@ -1,5 +1,6 @@
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
+import { serveStatic } from 'hono/bun'
 import { HTTPException } from 'hono/http-exception'
 import jwt from 'jsonwebtoken'
 
@@ -13,6 +14,9 @@ import account from 'controller/account'
 start()
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+app.use('/img/locations/*', serveStatic({ root: './' }))
+app.use('/img/users/*', serveStatic({ root: './' }))
 
 app.use(
   '*',
