@@ -67,6 +67,13 @@ const location = {
 
     return db.query(sql, params, 0)
   },
+
+  getUserList: (userId: number) => {
+    return location.getList({ users: [userId] })
+  },
+  getUserCount: (userId: number) => {
+    return location.getCount({ users: [userId] })
+  },
 }
 
 export default location

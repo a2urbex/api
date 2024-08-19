@@ -21,8 +21,12 @@ account.get('/', async (c) => {
 account.get('/:id', async (c) => {
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'user'))
+  const user = c.get('user')
 
   const userData = await dao.user.get(id)
+  const locationCount = await dao.location.getUserCount(id)
+  const friendCount = await dao.friend.getUserFriendsCount(id)
+  const isFriend = await dao.friend.isFriend(user.id, id)
 
   return c.json({
     username: userData.firstname,
@@ -32,6 +36,9 @@ account.get('/:id', async (c) => {
     instagram: userData.instagram,
     image: userData.image,
     banner: userData.banner,
+    urbexCount: locationCount.total,
+    friendCount: friendCount.total,
+    friendStatus: isFriend,
   })
 })
 
