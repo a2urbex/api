@@ -44,6 +44,19 @@ const location = {
     return [WHERE, params, LIMIT]
   },
 
+  get: (id: number) => {
+    const sql = `
+      SELECT l.id, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor, GROUP_CONCAT(fl.favorite_id) fids
+      FROM location l
+      LEFT JOIN category c ON c.id = l.category_id
+      LEFT JOIN favorite_location fl ON fl.location_id = l.id
+      WHERE l.id = ?
+      GROUP BY l.id
+    `
+
+    return db.query(sql, [id], 0)
+  },
+
   getList: (filters: SearchFilters) => {
     const [WHERE, params, LIMIT] = location.getFilters(filters)
 
