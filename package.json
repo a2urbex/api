@@ -1,0 +1,17 @@
+{
+  "scripts": {
+    "dev": "bun run --watch src/index.ts",
+    "prod": "bun run src/index.ts"
+  },
+  "dependencies": {
+    "bcrypt": "^5.1.1",
+    "bun": "^1.1.22",
+    "crypto": "^1.0.1",
+    "hono": "^4.2.9",
+    "jsonwebtoken": "^9.0.2",
+    "mysql2": "^3.6.0"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  }
+}
