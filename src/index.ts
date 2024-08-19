@@ -15,8 +15,11 @@ start()
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-app.use('/img/locations/*', serveStatic({ root: './' }))
-app.use('/img/users/*', serveStatic({ root: './' }))
+const noImage = () => {
+  throw new HTTPException(404, { message: 'no image found' })
+}
+app.use('/img/locations/*', serveStatic({ root: './', onNotFound: noImage }))
+app.use('/img/users/*', serveStatic({ root: './', onNotFound: noImage }))
 
 app.use(
   '*',
