@@ -41,6 +41,7 @@ const getLocations = async (user: User, filters: SearchFilters = {}) => {
   list.forEach((item: any) => {
     item.id = utils.encrypt(item.id.toString(), 'location')
     item.fids = item.fids?.split(',').map((fid: number) => utils.encrypt(fid.toString(), 'favorite'))
+    item.image = utils.getImageUrl(item.image)
     if (!item.fids) item.fids = []
   })
 

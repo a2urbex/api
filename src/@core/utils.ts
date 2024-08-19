@@ -37,6 +37,12 @@ const utils = {
     const decipher = createDecipheriv(config.encryption.method, config.encryption[type], config.encryption.iv)
     return decipher.update(buff.toString('utf8'), 'hex', 'utf8') + decipher.final('utf8')
   },
+
+  getImageUrl: (str: string) => {
+    if (!str) return str
+    if (str.indexOf('/img/') === 0) return config.apiUrl + str
+    return str
+  },
 }
 
 export default utils
