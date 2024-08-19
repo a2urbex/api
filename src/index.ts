@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { cors } from 'hono/cors'
 import { HTTPException } from 'hono/http-exception'
 import jwt from 'jsonwebtoken'
 
@@ -13,17 +14,20 @@ start()
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-app.use('*', async (c, next) => {
-  c.header('Access-Control-Allow-Origin', '*')
-  c.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS')
-  c.header('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+app.use(
+  '*',
+  cors({
+    origin: 'http://localhost:5173',
+    allowHeaders: ['Content-Type', 'Authorization'],
+    allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    exposeHeaders: ['Content-Length'],
+    maxAge: 600,
+    credentials: true,
+  })
+)
 
-  if (c.req.method === 'OPTIONS') {
-    // Respond to preflight requests immediately
-    return c.text('', 204)
-  }
-
-  await next()
+app.options('*', (c) => {
+  return c.text('', 204)
 })
 
 app.route('/auth', auth)
