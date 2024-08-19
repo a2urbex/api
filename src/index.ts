@@ -17,7 +17,7 @@ const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 app.use(
   '*',
   cors({
-    origin: config.frontUrl as string,
+    origin: config.frontUrl,
     allowHeaders: ['Content-Type', 'Authorization'],
     allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     exposeHeaders: ['Content-Length'],
