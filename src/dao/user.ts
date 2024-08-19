@@ -5,6 +5,11 @@ const user = {
     db = db1
   },
 
+  get: (id: number) => {
+    const sql = `SELECT id, email, firstname, lastname, about, youtube, tiktok, instagram, image, banner FROM user WHERE id = ?`
+    return db.query(sql, [id], 0)
+  },
+
   exist: (email: string) => {
     const sql = `SELECT id, email, password, roles, old FROM user WHERE email = ?`
     return db.query(sql, [email], 0)
