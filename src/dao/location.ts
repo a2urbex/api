@@ -44,33 +44,37 @@ const location = {
     return [WHERE, params, LIMIT]
   },
 
-  get: (id: number) => {
+  get: (id: number, userId: number) => {
     const sql = `
-      SELECT l.id, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor, GROUP_CONCAT(fl.favorite_id) fids
+      SELECT l.id, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor, 
+        GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
       LEFT JOIN category c ON c.id = l.category_id
       LEFT JOIN favorite_location fl ON fl.location_id = l.id
+      LEFT JOIN favorite_user fu ON fu.favorite_id = fl.favorite_id
       WHERE l.id = ?
       GROUP BY l.id
     `
 
-    return db.query(sql, [id], 0)
+    return db.query(sql, [userId, id], 0)
   },
 
-  getList: (filters: SearchFilters) => {
+  getList: (filters: SearchFilters, userId: number) => {
     const [WHERE, params, LIMIT] = location.getFilters(filters)
 
     const sql = `
-      SELECT l.id, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor, GROUP_CONCAT(fl.favorite_id) fids
+      SELECT l.id, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
+        GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
       LEFT JOIN category c ON c.id = l.category_id
       LEFT JOIN favorite_location fl ON fl.location_id = l.id
+      LEFT JOIN favorite_user fu ON fu.favorite_id = fl.favorite_id
       WHERE 1 ${WHERE}
       GROUP BY l.id
       ${LIMIT}
     `
 
-    return db.query(sql, params)
+    return db.query(sql, [userId, ...params])
   },
 
   getCount: (filters: SearchFilters) => {
@@ -82,7 +86,7 @@ const location = {
   },
 
   getUserList: (userId: number) => {
-    return location.getList({ users: [userId] })
+    return location.getList({ users: [userId] }, userId)
   },
   getUserCount: (userId: number) => {
     return location.getCount({ users: [userId] })

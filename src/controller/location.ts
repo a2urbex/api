@@ -14,7 +14,7 @@ const getLocations = async (user: User, filters: SearchFilters = {}) => {
   }
 
   const count = await dao.location.getCount(filters)
-  const list = await dao.location.getList(filters)
+  const list = await dao.location.getList(filters, user.id)
 
   return { count: count.total, list: list.map((item: any) => formatLocation(item)) }
 }
@@ -68,10 +68,11 @@ location.post('/map', async (c) => {
 })
 
 location.get('/:id', async (c) => {
+  const user = c.get('user')
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'location'))
 
-  const item = await dao.location.get(id)
+  const item = await dao.location.get(id, user.id)
   return c.json(formatLocation(item))
 })
 
