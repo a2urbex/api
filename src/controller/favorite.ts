@@ -19,7 +19,7 @@ favorite.get('/', async (c) => {
   return c.json(list)
 })
 
-favorite.get('/:id/location', async (c) => {
+favorite.get('/:id', async (c) => {
   const user = c.get('user')
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
