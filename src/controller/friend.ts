@@ -19,4 +19,15 @@ friend.get('/', async (c) => {
   })
 })
 
+friend.get('/search', async (c) => {
+  const user = c.get('user')
+  const string = c.req.queries('string')
+  const str = string ? string[0] : ''
+
+  const users = await dao.friend.getUserFriends(user.id)
+  const list = await dao.user.getFriendSearch([user.id, ...users], str)
+
+  return c.json(userService.formatUsers(list))
+})
+
 export default friend

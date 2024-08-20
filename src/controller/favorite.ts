@@ -146,7 +146,7 @@ favorite.get('/:id/search', async (c) => {
   const friends = await dao.friend.getUserFriends(user.id)
 
   const usersId = friends.filter((id: number) => !users.includes(id))
-  const list = await dao.user.getForSearch(usersId, str)
+  const list = await dao.user.getFavoriteSearch(usersId, str)
 
   return c.json(userService.formatUsers(list))
 })
