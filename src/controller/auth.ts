@@ -41,6 +41,9 @@ auth.post('/register', async (c) => {
   const hash = await bcrypt.hash(config.password.secret + password, config.password.salt)
   const add = await dao.user.add(email, hash, firstname, lastname)
 
+  const addFavorite = await dao.favorite.add('like', true)
+  await dao.favorite.addUser(addFavorite.insertId, add.insertId)
+
   return c.json({ token: createJwt(add.insertId, email) })
 })
 
