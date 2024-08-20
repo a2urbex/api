@@ -14,7 +14,7 @@ const isAuthorized = async (id: number, userId: number) => {
   return users.length
 }
 
-favorite.get('/', async (c) => {
+favorite.get('/summary', async (c) => {
   const user = c.get('user')
 
   const data = await dao.favorite.getList(user.id)
@@ -22,6 +22,23 @@ favorite.get('/', async (c) => {
     item.id = utils.encrypt(item.id.toString(), 'favorite')
     return item
   })
+
+  return c.json(list)
+})
+
+favorite.get('/', async (c) => {
+  const user = c.get('user')
+
+  const data = await dao.favorite.getList(user.id)
+  const list: any = []
+
+  for (let i = 0; i < data.length; i++) {
+    const item = { ...data[i] }
+    const users = await dao.favorite.getUsersInfo(item.id)
+    item.users = userService.formatUsers(users)
+    item.id = utils.encrypt(item.id.toString(), 'favorite')
+    list.push(item)
+  }
 
   return c.json(list)
 })

@@ -51,6 +51,14 @@ const favorite = {
     if (!result) return []
     return result.map((item: any) => item.user_id)
   },
+  getUsersInfo: async (id: number) => {
+    const sql = `
+      SELECT u.id, u.firstname, u.image FROM favorite_user fu
+      INNER JOIN user u ON u.id = fu.user_id
+      WHERE fu.favorite_id = ?
+    `
+    return db.query(sql, [id])
+  },
 
   deleteUser: (id: number, userId: number) => {
     const sql = `DELETE FROM favorite_user WHERE favorite_id = ? AND user_id = ?`
