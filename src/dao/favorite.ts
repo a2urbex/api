@@ -26,6 +26,19 @@ const favorite = {
     `
     return db.query(sql, [userId, id], 0)
   },
+
+  add: (name: string, master: boolean = false) => {
+    const sql = `INSERT INTO favorite (name, master) VALUES(?, ?)`
+    return db.query(sql, [name, master])
+  },
+  addUser: (favoriteId: number, userId: number) => {
+    const sql = `INSERT INTO favorite_user (favorite_id, user_id) VALUES (?, ?)`
+    return db.query(sql, [favoriteId, userId])
+  },
+  addLocation: (favoriteId: number, locationId: number) => {
+    const sql = `INSERT INTO favorite_location (favorite_id, location_id) VALUES (?, ?)`
+    return db.query(sql, [favoriteId, locationId])
+  },
 }
 
 export default favorite

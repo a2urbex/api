@@ -31,4 +31,19 @@ favorite.get('/:id/location', async (c) => {
   return c.json(data)
 })
 
+favorite.post('/', async (c) => {
+  const user = c.get('user')
+  const { name, locationId } = await c.req.json()
+
+  const add = await dao.favorite.add(name)
+  await dao.favorite.addUser(add.insertId, user.id)
+
+  if (locationId) {
+    const id = parseInt(utils.decrypt(locationId, 'location'))
+    await dao.favorite.addLocation(add.insertId, id)
+  }
+
+  return c.json({ id: utils.encrypt(add.insertId.toString(), 'favorite') })
+})
+
 export default favorite
