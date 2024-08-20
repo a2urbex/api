@@ -24,6 +24,11 @@ const user = {
     const sql = `UPDATE user SET password = ?, old = ? WHERE id = ?`
     return db.query(sql, [password, old, id])
   },
+
+  getForSearch: (ids: number[], str: string) => {
+    const sql = `SELECT id, firstname FROM user WHERE id IN (?) AND firstname LIKE ? LIMIT 10`
+    return db.query(sql, [ids, `%${str}%`])
+  },
 }
 
 export default user

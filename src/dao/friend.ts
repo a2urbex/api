@@ -5,9 +5,12 @@ const friend = {
     db = db1
   },
 
-  getUserFriends: (userId: number) => {
+  getUserFriends: async (userId: number) => {
     const sql = `SELECT friend_id FROM friend WHERE pending = 0 AND user_id = ?`
-    return db.query(sql, [userId])
+    const result = await db.query(sql, [userId])
+
+    if (!result) return []
+    return result.map((item: any) => item.friend_id)
   },
 
   getUserFriendsCount: (userId: number) => {

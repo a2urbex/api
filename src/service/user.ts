@@ -1,9 +1,12 @@
-import dao from 'dao'
+import utils from '@core/utils'
 
 const userService = {
-  getFriends: async (userId: number) => {
-    const friends = await dao.friend.getUserFriends(userId)
-    return friends.map((item: any) => item.friend_id)
+  formatUser: (item: any) => {
+    item.id = utils.encrypt(item.id.toString(), 'user')
+    return item
+  },
+  formatUsers: (list: any) => {
+    return list.map((item: any) => userService.formatUser(item))
   },
 }
 

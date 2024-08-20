@@ -44,9 +44,12 @@ const favorite = {
     return db.query(sql, [id, locationId])
   },
 
-  getUsers: (id: number) => {
+  getUsers: async (id: number) => {
     const sql = 'SELECT user_id FROM favorite_user WHERE favorite_id = ?'
-    return db.query(sql, [id])
+    const result = await db.query(sql, [id])
+
+    if (!result) return []
+    return result.map((item: any) => item.user_id)
   },
 
   deleteUser: (id: number, userId: number) => {
