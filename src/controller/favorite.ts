@@ -134,4 +134,22 @@ favorite.get('/:id/search', async (c) => {
   return c.json(userService.formatUsers(list))
 })
 
+favorite.put('/:id/user', async (c) => {
+  const user = c.get('user')
+  const { userId } = await c.req.json()
+  const encryptedId = c.req.param('id')
+
+  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+  const usrId = parseInt(utils.decrypt(userId, 'user'))
+
+  await isAuthorized(id, user.id)
+
+  const users = await dao.favorite.getUsers(id)
+  if (users.includes(usrId)) throw new HTTPException(400, { message: 'User already in favorite' })
+
+  await dao.favorite.addUser(id, usrId)
+
+  return c.json({})
+})
+
 export default favorite
