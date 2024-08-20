@@ -34,19 +34,39 @@ favorite.get('/:id', async (c) => {
 favorite.post('/', async (c) => {
   const user = c.get('user')
   const { name, locationId } = await c.req.json()
-  let locationIdDecoded = 0
+  let locId = 0
 
   if (locationId) {
-    locationIdDecoded = parseInt(utils.decrypt(locationId, 'location'))
+    locId = parseInt(utils.decrypt(locationId, 'location'))
     const access = await locationService.hasAccess(locationId, user)
     if (!access) throw new HTTPException(403, { message: 'Location is private' })
   }
 
   const add = await dao.favorite.add(name)
   await dao.favorite.addUser(add.insertId, user.id)
-  if (locationIdDecoded > 0) await dao.favorite.addLocation(add.insertId, locationIdDecoded)
+  if (locId > 0) await dao.favorite.addLocation(add.insertId, locId)
 
   return c.json({ id: utils.encrypt(add.insertId.toString(), 'favorite') })
+})
+
+favorite.put('/:id/location', async (c) => {
+  const user = c.get('user')
+  const { locationId, active } = await c.req.json()
+  const encryptedId = c.req.param('id')
+
+  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+  const locId = parseInt(utils.decrypt(locationId, 'location'))
+
+  const access = await locationService.hasAccess(locId, user)
+  if (!access) throw new HTTPException(403, { message: 'Location is private' })
+
+  const has = await dao.favorite.hasLocation(id, locId)
+  if (has && active) throw new HTTPException(400, { message: 'Location already in favorite' })
+
+  if (active) await dao.favorite.addLocation(id, locId)
+  else await dao.favorite.deleteLocation(id, locId)
+
+  return c.json({})
 })
 
 export default favorite

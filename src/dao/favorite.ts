@@ -31,13 +31,23 @@ const favorite = {
     const sql = `INSERT INTO favorite (name, master) VALUES(?, ?)`
     return db.query(sql, [name, master])
   },
-  addUser: (favoriteId: number, userId: number) => {
+  addUser: (id: number, userId: number) => {
     const sql = `INSERT INTO favorite_user (favorite_id, user_id) VALUES (?, ?)`
-    return db.query(sql, [favoriteId, userId])
+    return db.query(sql, [id, userId])
   },
-  addLocation: (favoriteId: number, locationId: number) => {
+  addLocation: (id: number, locationId: number) => {
     const sql = `INSERT INTO favorite_location (favorite_id, location_id) VALUES (?, ?)`
-    return db.query(sql, [favoriteId, locationId])
+    return db.query(sql, [id, locationId])
+  },
+
+  hasLocation: (id: number, locationId: number) => {
+    const sql = `SELECT 1 exist FROM favorite_location WHERE favorite_id = ? AND location_id = ?`
+    return db.query(sql, [id, locationId], 0)
+  },
+
+  deleteLocation: (id: number, locationId: number) => {
+    const sql = `DELETE FROM favorite_location WHEre favorite_id = ? AND location_id = ?`
+    return db.query(sql, [id, locationId])
   },
 }
 
