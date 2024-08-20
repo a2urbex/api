@@ -11,6 +11,7 @@ import auth from 'controller/auth'
 import location from 'controller/location'
 import account from 'controller/account'
 import favorite from 'controller/favorite'
+import friend from 'controller/friend'
 
 start()
 
@@ -60,6 +61,7 @@ app.use(async (c, next) => {
 app.route('/location', location)
 app.route('/account', account)
 app.route('/favorite', favorite)
+app.route('/friend', friend)
 
 export default {
   port: config.port,

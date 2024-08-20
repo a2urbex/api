@@ -24,6 +24,19 @@ const friend = {
     if (!result) return 'notFriend'
     return result.pending ? 'pending' : 'friend'
   },
+
+  getPendingUsers: async (userId: number) => {
+    const sql = `SELECT u.id, u.firstname, u.image FROM friend f INNER JOIN user u ON u.id = f.friend_id WHERE f.pending = 1 AND f.user_id = ?`
+    return db.query(sql, [userId])
+  },
+  getWaitingUsers: async (userId: number) => {
+    const sql = `SELECT u.id, u.firstname, u.image FROM friend f INNER JOIN user u ON u.id = f.user_id WHERE f.pending = 1 AND f.friend_id = ?`
+    return db.query(sql, [userId])
+  },
+  getUsers: async (userId: number) => {
+    const sql = `SELECT u.id, u.firstname, u.image FROM friend f INNER JOIN user u ON u.id = f.user_id WHERE f.pending = 0 AND f.friend_id = ?`
+    return db.query(sql, [userId])
+  },
 }
 
 export default friend
