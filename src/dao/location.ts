@@ -96,6 +96,11 @@ const location = {
   getUserCount: (userId: number) => {
     return location.getCount({ users: [userId] })
   },
+
+  getUser: (id: number) => {
+    const sql = `SELECT user_id FROM location WHERE id = ?`
+    return db.query(sql, [id], 0)
+  },
 }
 
 export default location

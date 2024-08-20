@@ -34,14 +34,17 @@ favorite.get('/:id', async (c) => {
 favorite.post('/', async (c) => {
   const user = c.get('user')
   const { name, locationId } = await c.req.json()
+  let locationIdDecoded = 0
+
+  if (locationId) {
+    locationIdDecoded = parseInt(utils.decrypt(locationId, 'location'))
+    const access = await locationService.hasAccess(locationId, user)
+    if (!access) throw new HTTPException(403, { message: 'Location is private' })
+  }
 
   const add = await dao.favorite.add(name)
   await dao.favorite.addUser(add.insertId, user.id)
-
-  if (locationId) {
-    const id = parseInt(utils.decrypt(locationId, 'location'))
-    await dao.favorite.addLocation(add.insertId, id)
-  }
+  if (locationIdDecoded > 0) await dao.favorite.addLocation(add.insertId, locationIdDecoded)
 
   return c.json({ id: utils.encrypt(add.insertId.toString(), 'favorite') })
 })
