@@ -10,13 +10,17 @@ import config from 'config'
 import auth from 'controller/auth'
 import location from 'controller/location'
 import account from 'controller/account'
+import favorite from 'controller/favorite'
 
 start()
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-app.use('/img/locations/*', serveStatic({ root: './' }))
-app.use('/img/users/*', serveStatic({ root: './' }))
+const noImage = () => {
+  throw new HTTPException(404, { message: 'no image found' })
+}
+app.use('/img/locations/*', serveStatic({ root: './', onNotFound: noImage }))
+app.use('/img/users/*', serveStatic({ root: './', onNotFound: noImage }))
 
 app.use(
   '*',
@@ -55,6 +59,7 @@ app.use(async (c, next) => {
 
 app.route('/location', location)
 app.route('/account', account)
+app.route('/favorite', favorite)
 
 export default {
   port: config.port,

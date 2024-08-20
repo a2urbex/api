@@ -1,5 +1,6 @@
 import { createCipheriv, createDecipheriv, createHash } from 'crypto'
 import config from 'config'
+import { HTTPException } from 'hono/http-exception'
 
 const utils = {
   generateRandomString: (length: number, charset: string = 'abcdefghijklmnopqrstuvwxyz0123456789') => {
@@ -35,7 +36,17 @@ const utils = {
     const buff = Buffer.from(str, 'utf8')
     // @ts-ignore
     const decipher = createDecipheriv(config.encryption.method, config.encryption[type], config.encryption.iv)
-    return decipher.update(buff.toString('utf8'), 'hex', 'utf8') + decipher.final('utf8')
+    try {
+      return decipher.update(buff.toString('utf8'), 'hex', 'utf8') + decipher.final('utf8')
+    } catch (e) {
+      throw new HTTPException(404, { message: 'id not found' })
+    }
+  },
+
+  getImageUrl: (str: string) => {
+    if (!str) return str
+    if (str.indexOf('/img/') === 0) return config.apiUrl + str
+    return str
   },
 }
 

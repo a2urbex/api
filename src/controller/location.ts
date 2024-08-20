@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 
 import dao from 'dao'
 import utils from '@core/utils'
+import locationService from 'service/location'
 
 const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -27,32 +28,12 @@ location.get('/filter', async (c) => {
   return c.json(out)
 })
 
-const getLocations = async (user: User, filters: SearchFilters = {}) => {
-  if (!utils.isSuperUser(user)) {
-    const friendRaw = await dao.friend.getUserFriends(user.id)
-    const friends = friendRaw.map((item: any) => item.friend_id)
-    filters.users = [user.id, ...friends]
-    delete filters.sources
-  }
-
-  const count = await dao.location.getCount(filters)
-  const list = await dao.location.getList(filters)
-
-  list.forEach((item: any) => {
-    item.id = utils.encrypt(item.id.toString(), 'location')
-    item.fids = item.fids?.split(',').map((fid: number) => utils.encrypt(fid.toString(), 'favorite'))
-    if (!item.fids) item.fids = []
-  })
-
-  return { count: count.total, list }
-}
-
 location.post('/p/:page{[0-9]+}', async (c) => {
   const user = c.get('user')
   const page = parseInt(c.req.param('page'))
   const { string, categories, countries, sources } = await c.req.json()
 
-  const data = await getLocations(user, { string, categories, countries, sources, page })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources, page })
   return c.json(data)
 })
 
@@ -60,8 +41,17 @@ location.post('/map', async (c) => {
   const user = c.get('user')
   const { string, categories, countries, sources } = await c.req.json()
 
-  const data = await getLocations(user, { string, categories, countries, sources })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources })
   return c.json(data)
+})
+
+location.get('/:id', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const id = parseInt(utils.decrypt(encryptedId, 'location'))
+
+  const item = await dao.location.get(id, user.id)
+  return c.json(locationService.formatLocation(item))
 })
 
 export default location

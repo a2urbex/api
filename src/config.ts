@@ -11,6 +11,7 @@ export default {
   port: process.env.PORT,
   mysql: mysql,
   frontUrl: process.env.FRONT_URL || '',
+  apiUrl: process.env.API_URL || '',
   password: {
     secret: process.env.PASSWORD_SECRET,
     salt: process.env.PASSWORD_SALT ? parseInt(process.env.PASSWORD_SALT) : 10,
