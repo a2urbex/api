@@ -16,15 +16,9 @@ const favorite = {
     return db.query(sql, [userId])
   },
 
-  get: (id: number, userId: number) => {
-    const sql = `
-      SELECT f.id, f.name, f.master, f.share, f.disabled, (CASE WHEN fu.user_id = ? THEN 1 ELSE 0 END) hasAccess
-      FROM favorite f
-      LEFT JOIN favorite_user fu ON fu.favorite_id = f.id
-      WHERE f.id = ?
-      GROUP BY f.id
-    `
-    return db.query(sql, [userId, id], 0)
+  get: (id: number) => {
+    const sql = `SELECT f.id, f.name, f.master, f.share, f.disabled FROM favorite f WHERE f.id = ?`
+    return db.query(sql, [id], 0)
   },
 
   add: (name: string, master: boolean = false) => {
@@ -68,6 +62,11 @@ const favorite = {
   delete: (id: number) => {
     const sql = `DELETE FROM favorite WHERE id = ?`
     return db.query(sql, [id])
+  },
+
+  disable: (id: number, disabled: boolean) => {
+    const sql = `UPDATE favorite SET disabled = ? WHERE id = ?`
+    return db.query(sql, [disabled, id])
   },
 }
 

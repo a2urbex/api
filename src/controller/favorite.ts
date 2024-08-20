@@ -7,6 +7,13 @@ import locationService from 'service/location'
 
 const favorite = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
+const isAuthorized = async (id: number, userId: number) => {
+  const favUsers = await dao.favorite.getUsers(id)
+  const users = favUsers.map((item: any) => item.user_id)
+  if (!users.includes(userId)) throw new HTTPException(403, { message: 'User unauthorized' })
+  return users.length
+}
+
 favorite.get('/', async (c) => {
   const user = c.get('user')
 
@@ -24,7 +31,7 @@ favorite.get('/:id', async (c) => {
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
 
-  const fav = await dao.favorite.get(id, user.id)
+  const fav = await dao.favorite.get(id)
   const favUsers = await dao.favorite.getUsers(id)
   const users = favUsers.map((item: any) => item.user_id)
 
@@ -60,6 +67,8 @@ favorite.put('/:id/location', async (c) => {
   const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
   const locId = parseInt(utils.decrypt(locationId, 'location'))
 
+  await isAuthorized(id, user.id)
+
   const access = await locationService.hasAccess(locId, user)
   if (!access) throw new HTTPException(403, { message: 'Location is private' })
 
@@ -77,19 +86,32 @@ favorite.delete('/:id', async (c) => {
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
 
-  const fav = await dao.favorite.get(id, user.id)
-  if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be deleted" })
+  const userCount = await isAuthorized(id, user.id)
 
-  const favUsers = await dao.favorite.getUsers(id)
-  const users = favUsers.map((item: any) => item.user_id)
-  if (!users.includes(user.id)) throw new HTTPException(403, { message: 'User unauthorized' })
+  const fav = await dao.favorite.get(id)
+  if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be deleted" })
 
   await dao.favorite.deleteUser(id, user.id)
 
-  if (users.length === 1) {
+  if (userCount === 1) {
     await dao.favorite.deleteLocations(id)
     await dao.favorite.delete(id)
   }
+
+  return c.json({})
+})
+
+favorite.put('/:id/disable', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+
+  await isAuthorized(id, user.id)
+
+  const fav = await dao.favorite.get(id)
+  if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be disabled" })
+
+  await dao.favorite.disable(id, !fav.disabled)
 
   return c.json({})
 })
