@@ -46,8 +46,28 @@ const favorite = {
   },
 
   deleteLocation: (id: number, locationId: number) => {
-    const sql = `DELETE FROM favorite_location WHEre favorite_id = ? AND location_id = ?`
+    const sql = `DELETE FROM favorite_location WHERE favorite_id = ? AND location_id = ?`
     return db.query(sql, [id, locationId])
+  },
+
+  getUsers: (id: number) => {
+    const sql = 'SELECT user_id FROM favorite_user WHERE favorite_id = ?'
+    return db.query(sql, [id])
+  },
+
+  deleteUser: (id: number, userId: number) => {
+    const sql = `DELETE FROM favorite_user WHERE favorite_id = ? AND user_id = ?`
+    return db.query(sql, [id, userId])
+  },
+
+  deleteLocations: (id: number) => {
+    const sql = `DELETE FROM favorite_location WHERE favorite_id = ?`
+    return db.query(sql, [id])
+  },
+
+  delete: (id: number) => {
+    const sql = `DELETE FROM favorite WHERE id = ?`
+    return db.query(sql, [id])
   },
 }
 
