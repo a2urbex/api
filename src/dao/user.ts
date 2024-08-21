@@ -24,6 +24,15 @@ const user = {
     const sql = `UPDATE user SET password = ?, old = ? WHERE id = ?`
     return db.query(sql, [password, old, id])
   },
+
+  getFavoriteSearch: (ids: number[], str: string) => {
+    const sql = `SELECT id, firstname, image FROM user WHERE id IN (?) AND firstname LIKE ? LIMIT 10`
+    return db.query(sql, [ids, `%${str}%`])
+  },
+  getFriendSearch: (ids: number[], str: string) => {
+    const sql = `SELECT id, firstname, image FROM user WHERE id NOT IN (?) AND firstname LIKE ? LIMIT 10`
+    return db.query(sql, [ids, `%${str}%`])
+  },
 }
 
 export default user
