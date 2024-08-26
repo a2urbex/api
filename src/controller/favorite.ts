@@ -74,7 +74,7 @@ favorite.post('/', async (c) => {
   return c.json({ id: utils.encrypt(add.insertId.toString(), 'favorite') })
 })
 
-favorite.post('/:id/location/:locationId', async (c) => {
+favorite.put('/:id/location/:locationId', async (c) => {
   const user = c.get('user')
   const encryptedId = c.req.param('id')
   const encryptedLocationId = c.req.param('locationId')
@@ -86,25 +86,8 @@ favorite.post('/:id/location/:locationId', async (c) => {
   await locationService.hasAccess(locId, user)
 
   const has = await dao.favorite.hasLocation(id, locId)
-  if (has) throw new HTTPException(400, { message: 'Location already in favorite' })
-
-  await dao.favorite.addLocation(id, locId)
-
-  return c.json({})
-})
-
-favorite.delete('/:id/location/:locationId', async (c) => {
-  const user = c.get('user')
-  const encryptedId = c.req.param('id')
-  const encryptedLocationId = c.req.param('locationId')
-
-  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
-  const locId = parseInt(utils.decrypt(encryptedLocationId, 'location'))
-
-  await isAuthorized(id, user.id)
-  await locationService.hasAccess(locId, user)
-
-  await dao.favorite.deleteLocation(id, locId)
+  if (has) await dao.favorite.deleteLocation(id, locId)
+  else await dao.favorite.addLocation(id, locId)
 
   return c.json({})
 })
