@@ -127,6 +127,21 @@ favorite.put('/:id/disable', async (c) => {
   return c.json({})
 })
 
+favorite.put('/:id/share', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+
+  await isAuthorized(id, user.id)
+
+  const fav = await dao.favorite.get(id)
+  if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be shared" })
+
+  await dao.favorite.share(id, !fav.share)
+
+  return c.json({})
+})
+
 favorite.get('/:id/search', async (c) => {
   const user = c.get('user')
   const string = c.req.queries('string')

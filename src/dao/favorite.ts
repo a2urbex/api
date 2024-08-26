@@ -79,6 +79,11 @@ const favorite = {
     const sql = `UPDATE favorite SET disabled = ? WHERE id = ?`
     return db.query(sql, [disabled, id])
   },
+
+  share: (id: number, share: boolean) => {
+    const sql = `UPDATE favorite SET share = ? WHERE id = ?`
+    return db.query(sql, [share, id])
+  },
 }
 
 export default favorite
