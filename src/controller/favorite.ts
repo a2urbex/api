@@ -54,7 +54,7 @@ favorite.get('/:id', async (c) => {
   if (!users.includes(user.id) && !fav?.share) throw new HTTPException(403, { message: 'Favorite is private' })
 
   const data = await locationService.getLocations(user, { favoriteId: id })
-  return c.json(data)
+  return c.json({ name: fav.name, list: data })
 })
 
 favorite.post('/', async (c) => {
@@ -64,8 +64,7 @@ favorite.post('/', async (c) => {
 
   if (locationId) {
     locId = parseInt(utils.decrypt(locationId, 'location'))
-    const access = await locationService.hasAccess(locationId, user)
-    if (!access) throw new HTTPException(403, { message: 'Location is private' })
+    await locationService.hasAccess(locationId, user)
   }
 
   const add = await dao.favorite.add(name)
@@ -75,24 +74,20 @@ favorite.post('/', async (c) => {
   return c.json({ id: utils.encrypt(add.insertId.toString(), 'favorite') })
 })
 
-favorite.put('/:id/location', async (c) => {
+favorite.put('/:id/location/:locationId', async (c) => {
   const user = c.get('user')
-  const { locationId, active } = await c.req.json()
   const encryptedId = c.req.param('id')
+  const encryptedLocationId = c.req.param('locationId')
 
   const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
-  const locId = parseInt(utils.decrypt(locationId, 'location'))
+  const locId = parseInt(utils.decrypt(encryptedLocationId, 'location'))
 
   await isAuthorized(id, user.id)
-
-  const access = await locationService.hasAccess(locId, user)
-  if (!access) throw new HTTPException(403, { message: 'Location is private' })
+  await locationService.hasAccess(locId, user)
 
   const has = await dao.favorite.hasLocation(id, locId)
-  if (has && active) throw new HTTPException(400, { message: 'Location already in favorite' })
-
-  if (active) await dao.favorite.addLocation(id, locId)
-  else await dao.favorite.deleteLocation(id, locId)
+  if (has) await dao.favorite.deleteLocation(id, locId)
+  else await dao.favorite.addLocation(id, locId)
 
   return c.json({})
 })
@@ -128,6 +123,21 @@ favorite.put('/:id/disable', async (c) => {
   if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be disabled" })
 
   await dao.favorite.disable(id, !fav.disabled)
+
+  return c.json({})
+})
+
+favorite.put('/:id/share', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+
+  await isAuthorized(id, user.id)
+
+  const fav = await dao.favorite.get(id)
+  if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be shared" })
+
+  await dao.favorite.share(id, !fav.share)
 
   return c.json({})
 })
