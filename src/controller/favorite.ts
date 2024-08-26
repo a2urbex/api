@@ -64,8 +64,7 @@ favorite.post('/', async (c) => {
 
   if (locationId) {
     locId = parseInt(utils.decrypt(locationId, 'location'))
-    const access = await locationService.hasAccess(locationId, user)
-    if (!access) throw new HTTPException(403, { message: 'Location is private' })
+    await locationService.hasAccess(locationId, user)
   }
 
   const add = await dao.favorite.add(name)
@@ -75,24 +74,37 @@ favorite.post('/', async (c) => {
   return c.json({ id: utils.encrypt(add.insertId.toString(), 'favorite') })
 })
 
-favorite.put('/:id/location', async (c) => {
+favorite.post('/:id/location/:locationId', async (c) => {
   const user = c.get('user')
-  const { locationId, active } = await c.req.json()
   const encryptedId = c.req.param('id')
+  const encryptedLocationId = c.req.param('locationId')
 
   const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
-  const locId = parseInt(utils.decrypt(locationId, 'location'))
+  const locId = parseInt(utils.decrypt(encryptedLocationId, 'location'))
 
   await isAuthorized(id, user.id)
-
-  const access = await locationService.hasAccess(locId, user)
-  if (!access) throw new HTTPException(403, { message: 'Location is private' })
+  await locationService.hasAccess(locId, user)
 
   const has = await dao.favorite.hasLocation(id, locId)
-  if (has && active) throw new HTTPException(400, { message: 'Location already in favorite' })
+  if (has) throw new HTTPException(400, { message: 'Location already in favorite' })
 
-  if (active) await dao.favorite.addLocation(id, locId)
-  else await dao.favorite.deleteLocation(id, locId)
+  await dao.favorite.addLocation(id, locId)
+
+  return c.json({})
+})
+
+favorite.delete('/:id/location/:locationId', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const encryptedLocationId = c.req.param('locationId')
+
+  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+  const locId = parseInt(utils.decrypt(encryptedLocationId, 'location'))
+
+  await isAuthorized(id, user.id)
+  await locationService.hasAccess(locId, user)
+
+  await dao.favorite.deleteLocation(id, locId)
 
   return c.json({})
 })

@@ -1,3 +1,5 @@
+import { HTTPException } from 'hono/http-exception'
+
 import utils from '@core/utils'
 import dao from 'dao'
 
@@ -25,12 +27,12 @@ const locationService = {
   },
 
   hasAccess: async (locationId: number, user: User) => {
-    if (utils.isSuperUser(user)) return true
+    if (utils.isSuperUser(user)) return
 
     const friends = await dao.friend.getUserFriends(user.id)
     const location = await dao.location.getUser(locationId)
 
-    return friends.includes(location.user_id)
+    if (!friends.includes(location.user_id)) throw new HTTPException(403, { message: 'Location is private' })
   },
 }
 
