@@ -7,7 +7,7 @@ const favorite = {
 
   getList: (userId: number) => {
     const sql = `
-      SELECT f.id, f.name, COUNT(fl.favorite_id) count FROM favorite f
+      SELECT f.id, f.name, f.share, f.disabled, COUNT(fl.favorite_id) count FROM favorite f
       LEFT JOIN favorite_user fu ON fu.favorite_id = f.id
       LEFT JOIN favorite_location fl ON fl.favorite_id = f.id
       WHERE fu.user_id = ?
