@@ -54,7 +54,7 @@ favorite.get('/:id', async (c) => {
   if (!users.includes(user.id) && !fav?.share) throw new HTTPException(403, { message: 'Favorite is private' })
 
   const data = await locationService.getLocations(user, { favoriteId: id })
-  return c.json(data)
+  return c.json({ name: fav.name, list: data })
 })
 
 favorite.post('/', async (c) => {
