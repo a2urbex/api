@@ -63,4 +63,17 @@ friend.delete('/:id', async (c) => {
   return c.json({})
 })
 
+friend.put('/:id/cancel', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const friendId = parseInt(utils.decrypt(encryptedId, 'user'))
+
+  const isFriend = await dao.friend.isFriend(user.id, friendId)
+  if (isFriend !== 'pending') throw new HTTPException(404, { message: 'No pending request' })
+
+  await dao.friend.deleteFriend(user.id, friendId)
+
+  return c.json({})
+})
+
 export default friend
