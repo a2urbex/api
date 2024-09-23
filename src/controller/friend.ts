@@ -49,4 +49,18 @@ friend.post('/:id', async (c) => {
   return c.json({})
 })
 
+friend.delete('/:id', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const friendId = parseInt(utils.decrypt(encryptedId, 'user'))
+
+  const isFriend = await dao.friend.isFriend(user.id, friendId)
+  if (isFriend !== 'friend') throw new HTTPException(404, { message: 'Not friend' })
+
+  await dao.friend.deleteFriend(user.id, friendId)
+  await dao.friend.deleteFriend(friendId, user.id)
+
+  return c.json({})
+})
+
 export default friend

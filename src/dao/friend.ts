@@ -47,6 +47,11 @@ const friend = {
     const sql = `INSERT INTO friend (user_id, friend_id, pending) VALUES (?, ?, ?)`
     return db.query(sql, [userId, friendId, pending])
   },
+
+  deleteFriend: async (userId: number, friendId: number) => {
+    const sql = `DELETE FROM friend WHERE user_id = ? AND friend_id = ?`
+    return db.query(sql, [userId, friendId])
+  },
 }
 
 export default friend
