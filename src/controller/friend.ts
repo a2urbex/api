@@ -76,4 +76,18 @@ friend.put('/:id/cancel', async (c) => {
   return c.json({})
 })
 
+friend.put('/:id/accept', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const friendId = parseInt(utils.decrypt(encryptedId, 'user'))
+
+  const isFriend = await dao.friend.isFriend(friendId, user.id)
+  if (isFriend !== 'pending') throw new HTTPException(404, { message: 'No pending request' })
+
+  await dao.friend.enableFriend(friendId, user.id)
+  await dao.friend.addFriend(user.id, friendId, false)
+
+  return c.json({})
+})
+
 export default friend

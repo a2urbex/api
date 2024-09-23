@@ -43,7 +43,7 @@ const friend = {
     return db.query(sql, [userId, friendId])
   },
 
-  addFriend: async (userId: number, friendId: number, pending: boolean = true) => {
+  addFriend: async (userId: number, friendId: number, pending: boolean) => {
     const sql = `INSERT INTO friend (user_id, friend_id, pending) VALUES (?, ?, ?)`
     return db.query(sql, [userId, friendId, pending])
   },
