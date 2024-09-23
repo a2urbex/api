@@ -44,9 +44,9 @@ friend.post('/:id', async (c) => {
   const isFriend2 = await dao.friend.isFriend(friendId, user.id)
   if (isFriend2 === 'pending') await dao.friend.enableFriend(friendId, user.id)
 
-  await dao.friend.addFriend(user.id, friendId, isFriend2 === 'pending' ? false : true)
+  await dao.friend.addFriend(user.id, friendId, isFriend2 !== 'pending')
 
-  return c.json({})
+  return c.json({ friend: isFriend2 === 'pending' })
 })
 
 friend.delete('/:id', async (c) => {
