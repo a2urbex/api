@@ -54,4 +54,11 @@ location.get('/:id', async (c) => {
   return c.json(locationService.formatLocation(item))
 })
 
+location.get('/', async (c) => {
+  const user = c.get('user')
+
+  const data = await locationService.getLocations(user, {}, true)
+  return c.json(data)
+})
+
 export default location

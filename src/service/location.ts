@@ -4,11 +4,15 @@ import utils from '@core/utils'
 import dao from 'dao'
 
 const locationService = {
-  getLocations: async (user: User, filters: SearchFilters = {}) => {
-    if (!utils.isSuperUser(user)) {
-      const friends = await dao.friend.getUserFriends(user.id)
-      filters.users = [user.id, ...friends]
-      delete filters.sources
+  getLocations: async (user: User, filters: SearchFilters = {}, self: boolean = false) => {
+    if (self) {
+      filters.users = [user.id]
+    } else {
+      if (!utils.isSuperUser(user)) {
+        const friends = await dao.friend.getUserFriends(user.id)
+        filters.users = [user.id, ...friends]
+        delete filters.sources
+      }
     }
 
     const count = await dao.location.getCount(filters)
