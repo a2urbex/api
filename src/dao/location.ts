@@ -134,6 +134,11 @@ const location = {
     const sql = `UPDATE location SET name = ?, description = ?, image = ?, lat = ?, lon = ?, category_id = ?, country_id = ? WHERE id = ?`
     return db.query(sql, [name, description, image, lat, lon, categoryId, countryId, id])
   },
+
+  delete: (id: number) => {
+    const sql = `DELETE FROM location WHERE id = ?`
+    return db.query(sql, [id])
+  },
 }
 
 export default location

@@ -111,4 +111,19 @@ location.put('/:id', async (c) => {
   return c.json({})
 })
 
+location.delete('/:id', async (c) => {
+  const user = c.get('user')
+  const encryptedId = c.req.param('id')
+  const id = parseInt(utils.decrypt(encryptedId, 'location'))
+
+  await isAuthorized(id, user.id)
+
+  const loc = await dao.location.getRaw(id)
+
+  await utils.deleteImage(loc.image)
+  await dao.location.delete(id)
+
+  return c.json({})
+})
+
 export default location

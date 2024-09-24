@@ -78,7 +78,7 @@ const utils = {
   },
 
   deleteImage: async (imgPath: string) => {
-    if (imgPath.indexOf('/img/') !== 0) return
+    if (imgPath?.indexOf('/img/') !== 0) return
     let path = imgPath.charAt(0) === '/' ? imgPath.substring(1) : imgPath
 
     try {
