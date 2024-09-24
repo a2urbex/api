@@ -16,8 +16,6 @@ const geocoderService = {
     const res = await geocoder.reverse({ lat, lon })
     if (!res.length || !res[0].countryCode) return
 
-    res[0].countryCode = 'AWS2'
-
     const exist = await dao.country.getFromCode(res[0].countryCode)
     if (exist) return exist
 
