@@ -64,6 +64,11 @@ const location = {
     return db.query(sql, [userId, id], 0)
   },
 
+  getRaw: (id: number) => {
+    const sql = `SELECT * FROM location WHERE id = ?`
+    return db.query(sql, [id], 0)
+  },
+
   getList: (filters: SearchFilters, userId: number) => {
     const [WHERE, params, LIMIT] = location.getFilters(filters)
 
@@ -116,9 +121,18 @@ const location = {
     return db.query(sql, [name, description, image, lat, lon, categoryId, countryId, userId])
   },
 
-  updateCountry: (id: number, countryId: number) => {
-    const sql = `UPDATE location SET country_id = ? WHERE id = ?`
-    return db.query(sql, [countryId, id])
+  update: (
+    id: number,
+    name: string,
+    description: string,
+    image: string,
+    lat: number,
+    lon: number,
+    categoryId: number,
+    countryId: number
+  ) => {
+    const sql = `UPDATE location SET name = ?, description = ?, image = ?, lat = ?, lon = ?, category_id = ?, country_id = ? WHERE id = ?`
+    return db.query(sql, [name, description, image, lat, lon, categoryId, countryId, id])
   },
 }
 

@@ -10,6 +10,11 @@ import config from 'config'
 
 const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
+const isAuthorized = async (id: number, userId: number) => {
+  const loc = await dao.location.getUser(id)
+  if (loc?.user_id !== userId) throw new HTTPException(403, { message: 'User unauthorized' })
+}
+
 location.get('/filter', async (c) => {
   const user = c.get('user')
   const out: any = {
@@ -72,11 +77,36 @@ location.post('/', async (c) => {
   const country = await geocoderService.getCountry(body.lat, body.lon)
   const image = await utils.saveImage(body.image, config.image.location)
 
-  await dao.location.add(body.name, body.description, image, body.lat, body.lon, body.categoryId, country.id, user.id)
+  await dao.location.add(body.name, body.description, image, body.lat, body.lon, body.categoryId, country?.id, user.id)
 
   return c.json({})
 })
-location.put('/:id', async (c) => {})
-location.delete('/:id', async (c) => {})
+
+location.put('/:id', async (c) => {
+  const user = c.get('user')
+  const body: any = await c.req.parseBody()
+  const encryptedId = c.req.param('id')
+  const id = parseInt(utils.decrypt(encryptedId, 'location'))
+
+  await isAuthorized(id, user.id)
+
+  const loc = await dao.location.getRaw(id)
+
+  let countryId = loc.country_id
+  if (parseFloat(body.lat) !== loc.lat || parseFloat(body.lon) !== loc.lon) {
+    const country = await geocoderService.getCountry(body.lat, body.lon)
+    countryId = country?.id
+  }
+
+  let image = loc.image
+  if (body.image) {
+    await utils.deleteImage(image)
+    image = await utils.saveImage(body.image, config.image.location)
+  }
+
+  await dao.location.update(id, body.name, body.description, image, body.lat, body.lon, body.categoryId, countryId)
+
+  return c.json({})
+})
 
 export default location

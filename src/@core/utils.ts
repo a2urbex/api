@@ -1,6 +1,6 @@
 import { createCipheriv, createDecipheriv } from 'crypto'
 import { HTTPException } from 'hono/http-exception'
-import * as fs from 'node:fs'
+import * as fs from 'node:fs/promises'
 
 import config from 'config'
 
@@ -68,11 +68,24 @@ const utils = {
     const imgPath = `${path}/${utils.generateRandomString(16)}.${imgType}`
     const buffer = Buffer.from(await img.arrayBuffer())
 
-    fs.writeFile(imgPath, buffer, (err) => {
-      if (err) throw new HTTPException(500, { message: 'Error uploading image' })
-    })
+    try {
+      await fs.writeFile(imgPath, buffer)
+    } catch (e) {
+      throw new HTTPException(500, { message: 'Error uploading image' })
+    }
 
     return '/' + imgPath
+  },
+
+  deleteImage: async (imgPath: string) => {
+    if (imgPath.indexOf('/img/') !== 0) return
+    let path = imgPath.charAt(0) === '/' ? imgPath.substring(1) : imgPath
+
+    try {
+      await fs.unlink(path)
+    } catch (e) {
+      throw new HTTPException(500, { message: 'Error deleting old image' })
+    }
   },
 }
 
