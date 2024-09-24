@@ -101,6 +101,25 @@ const location = {
     const sql = `SELECT user_id FROM location WHERE id = ?`
     return db.query(sql, [id], 0)
   },
+
+  add: (
+    name: string,
+    description: string,
+    image: string,
+    lat: number,
+    lon: number,
+    categoryId: number,
+    countryId: number,
+    userId: number | null = null
+  ) => {
+    const sql = `INSERT INTO location (name, description, image, lat, lon, category_id, country_id, user_id, date_add) VALUES(?, ?, ?, ?, ?, ?, ?, ?, NOW())`
+    return db.query(sql, [name, description, image, lat, lon, categoryId, countryId, userId])
+  },
+
+  updateCountry: (id: number, countryId: number) => {
+    const sql = `UPDATE location SET country_id = ? WHERE id = ?`
+    return db.query(sql, [countryId, id])
+  },
 }
 
 export default location

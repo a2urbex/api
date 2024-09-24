@@ -1,8 +1,12 @@
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 
 import dao from 'dao'
 import utils from '@core/utils'
+
 import locationService from 'service/location'
+import geocoderService from 'service/geocoder'
+import config from 'config'
 
 const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -60,5 +64,19 @@ location.get('/', async (c) => {
   const data = await locationService.getLocations(user, {}, true)
   return c.json(data)
 })
+
+location.post('/', async (c) => {
+  const user = c.get('user')
+  const body: any = await c.req.parseBody()
+
+  const country = await geocoderService.getCountry(body.lat, body.lon)
+  const image = await utils.saveImage(body.image, config.image.location)
+
+  await dao.location.add(body.name, body.description, image, body.lat, body.lon, body.categoryId, country.id, user.id)
+
+  return c.json({})
+})
+location.put('/:id', async (c) => {})
+location.delete('/:id', async (c) => {})
 
 export default location
