@@ -1,13 +1,13 @@
-import dao from 'dao'
 import NodeGeocoder from 'node-geocoder'
+
+import config from 'config'
+import dao from 'dao'
 
 let geocoder: any = null
 
 const geocoderService = {
   init: () => {
-    geocoder = NodeGeocoder({
-      apiKey: 'AIzaSyCTdhA8Qw48SBpFibEDWyhYyT-HALsMABk',
-    })
+    geocoder = NodeGeocoder({ apiKey: config.googleApiKey })
   },
 
   getCountry: async (lat: number, lon: number) => {
