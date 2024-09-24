@@ -36,7 +36,8 @@ const locationService = {
     const friends = await dao.friend.getUserFriends(user.id)
     const location = await dao.location.getUser(locationId)
 
-    if (!friends.includes(location.user_id)) throw new HTTPException(403, { message: 'Location is private' })
+    const list = [...friends, user.id]
+    if (!list.includes(location.user_id)) throw new HTTPException(403, { message: 'Location is private' })
   },
 }
 
