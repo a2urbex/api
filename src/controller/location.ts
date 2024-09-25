@@ -122,6 +122,7 @@ location.delete('/:id', async (c) => {
 
   await utils.deleteImage(loc.image)
   await dao.location.delete(id)
+  await dao.favorite.deleteLocations(id)
 
   return c.json({})
 })
