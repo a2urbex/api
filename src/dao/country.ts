@@ -6,7 +6,7 @@ const country = {
   },
 
   getList: () => {
-    const sql = `SELECT id, name FROM country`
+    const sql = `SELECT id, name FROM country ORDER BY name ASC`
     return db.query(sql)
   },
   getFromCode: (code: string) => {
