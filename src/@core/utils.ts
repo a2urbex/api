@@ -1,6 +1,8 @@
-import { createCipheriv, createDecipheriv, createHash } from 'crypto'
-import config from 'config'
+import { createCipheriv, createDecipheriv } from 'crypto'
 import { HTTPException } from 'hono/http-exception'
+import * as fs from 'node:fs/promises'
+
+import config from 'config'
 
 const utils = {
   generateRandomString: (length: number, charset: string = 'abcdefghijklmnopqrstuvwxyz0123456789') => {
@@ -47,6 +49,43 @@ const utils = {
     if (!str) return str
     if (str.indexOf('/img/') === 0) return config.apiUrl + str
     return str
+  },
+
+  getImageExtension: (type: string) => {
+    const types = {
+      'image/png': 'png',
+      'image/jpeg': 'jpeg',
+      'image/jpg': 'jpg',
+    }
+
+    return types[type]
+  },
+
+  saveImage: async (img: any, path: string) => {
+    const imgType = utils.getImageExtension(img.type)
+    if (!imgType) throw new HTTPException(422, { message: 'Unauthorized image format' })
+
+    const imgPath = `${path}/${utils.generateRandomString(16)}.${imgType}`
+    const buffer = Buffer.from(await img.arrayBuffer())
+
+    try {
+      await fs.writeFile(imgPath, buffer)
+    } catch (e) {
+      throw new HTTPException(500, { message: 'Error uploading image' })
+    }
+
+    return '/' + imgPath
+  },
+
+  deleteImage: async (imgPath: string) => {
+    if (imgPath?.indexOf('/img/') !== 0) return
+    let path = imgPath.charAt(0) === '/' ? imgPath.substring(1) : imgPath
+
+    try {
+      await fs.unlink(path)
+    } catch (e) {
+      throw new HTTPException(500, { message: 'Error deleting old image' })
+    }
   },
 }
 

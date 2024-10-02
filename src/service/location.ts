@@ -4,15 +4,21 @@ import utils from '@core/utils'
 import dao from 'dao'
 
 const locationService = {
-  getLocations: async (user: User, filters: SearchFilters = {}) => {
-    if (!utils.isSuperUser(user)) {
-      const friends = await dao.friend.getUserFriends(user.id)
-      filters.users = [user.id, ...friends]
-      delete filters.sources
+  getLocations: async (user: User | any, filters: SearchFilters = {}, self: boolean = false) => {
+    if (user) {
+      if (self) {
+        filters.users = [user.id]
+      } else {
+        if (!utils.isSuperUser(user)) {
+          const friends = await dao.friend.getUserFriends(user.id)
+          filters.users = [user.id, ...friends]
+          delete filters.sources
+        }
+      }
     }
 
     const count = await dao.location.getCount(filters)
-    const list = await dao.location.getList(filters, user.id)
+    const list = await dao.location.getList(filters, user?.id)
 
     return { count: count.total, list: list.map((item: any) => locationService.formatLocation(item)) }
   },
@@ -32,7 +38,8 @@ const locationService = {
     const friends = await dao.friend.getUserFriends(user.id)
     const location = await dao.location.getUser(locationId)
 
-    if (!friends.includes(location.user_id)) throw new HTTPException(403, { message: 'Location is private' })
+    const list = [...friends, user.id]
+    if (!list.includes(location.user_id)) throw new HTTPException(403, { message: 'Location is private' })
   },
 }
 

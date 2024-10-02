@@ -37,6 +37,21 @@ const friend = {
     const sql = `SELECT u.id, u.firstname, u.image FROM friend f INNER JOIN user u ON u.id = f.user_id WHERE f.pending = 0 AND f.friend_id = ?`
     return db.query(sql, [userId])
   },
+
+  enableFriend: async (userId: number, friendId: number) => {
+    const sql = `UPDATE friend SET pending = 0 WHERE user_id = ? AND friend_id = ?`
+    return db.query(sql, [userId, friendId])
+  },
+
+  addFriend: async (userId: number, friendId: number, pending: boolean) => {
+    const sql = `INSERT INTO friend (user_id, friend_id, pending) VALUES (?, ?, ?)`
+    return db.query(sql, [userId, friendId, pending])
+  },
+
+  deleteFriend: async (userId: number, friendId: number) => {
+    const sql = `DELETE FROM friend WHERE user_id = ? AND friend_id = ?`
+    return db.query(sql, [userId, friendId])
+  },
 }
 
 export default friend

@@ -25,4 +25,11 @@ export default {
     favorite: process.env.FAVORITE_SECRET,
     user: process.env.USER_SECRET,
   },
+
+  image: {
+    location: process.env.LOCATION_IMAGE_PATH || '',
+    user: process.env.USER_IMAGE_PATH || '',
+  },
+
+  googleApiKey: process.env.GOOGLE_API_KEY,
 }

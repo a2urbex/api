@@ -3,6 +3,8 @@ import { HTTPException } from 'hono/http-exception'
 
 import dao from 'dao'
 import utils from '@core/utils'
+
+import { authMiddleware, getUser } from 'service/auth'
 import locationService from 'service/location'
 import userService from 'service/user'
 
@@ -13,6 +15,25 @@ const isAuthorized = async (id: number, userId: number) => {
   if (!users.includes(userId)) throw new HTTPException(403, { message: 'User unauthorized' })
   return users.length
 }
+
+favorite.get('/:id', async (c) => {
+  const user = getUser(c)
+  const encryptedId = c.req.param('id')
+  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+
+  const fav = await dao.favorite.get(id)
+  const users = await dao.favorite.getUsers(id)
+
+  let isPrivate = !users.includes(user?.id)
+  if (isPrivate && fav?.share) isPrivate = false
+
+  if (isPrivate) throw new HTTPException(403, { message: 'Favorite is private' })
+
+  const data = await locationService.getLocations(user, { favoriteId: id })
+  return c.json({ name: fav.name, list: data })
+})
+
+favorite.use(authMiddleware)
 
 favorite.get('/summary', async (c) => {
   const user = c.get('user')
@@ -41,20 +62,6 @@ favorite.get('/', async (c) => {
   }
 
   return c.json(list)
-})
-
-favorite.get('/:id', async (c) => {
-  const user = c.get('user')
-  const encryptedId = c.req.param('id')
-  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
-
-  const fav = await dao.favorite.get(id)
-  const users = await dao.favorite.getUsers(id)
-
-  if (!users.includes(user.id) && !fav?.share) throw new HTTPException(403, { message: 'Favorite is private' })
-
-  const data = await locationService.getLocations(user, { favoriteId: id })
-  return c.json({ name: fav.name, list: data })
 })
 
 favorite.post('/', async (c) => {
