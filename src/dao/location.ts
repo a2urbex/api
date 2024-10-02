@@ -69,7 +69,7 @@ const location = {
     return db.query(sql, [id], 0)
   },
 
-  getList: (filters: SearchFilters, userId: number) => {
+  getList: (filters: SearchFilters, userId: number | null) => {
     const [WHERE, params, LIMIT] = location.getFilters(filters)
 
     const sql = `

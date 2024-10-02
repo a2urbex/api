@@ -3,30 +3,19 @@ import { Hono } from 'hono'
 import dao from 'dao'
 import utils from '@core/utils'
 
+import { authMiddleware, getUser } from 'service/auth'
+
 const account = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-account.get('/', async (c) => {
-  const user = c.get('user')
-
-  const userData = await dao.user.get(user.id)
-
-  return c.json({
-    id: utils.encrypt(user.id.toString(), 'user'),
-    username: userData.firstname,
-    image: userData.image,
-    isAdmin: utils.isAdmin(user),
-  })
-})
-
 account.get('/:id', async (c) => {
+  const user = getUser(c)
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'user'))
-  const user = c.get('user')
 
   const userData = await dao.user.get(id)
   const locationCount = await dao.location.getUserCount(id)
   const friendCount = await dao.friend.getUserFriendsCount(id)
-  const isFriend = await dao.friend.isFriend(user.id, id)
+  const isFriend = await dao.friend.isFriend(user?.id, id)
 
   return c.json({
     username: userData.firstname,
@@ -39,6 +28,21 @@ account.get('/:id', async (c) => {
     urbexCount: locationCount.total,
     friendCount: friendCount.total,
     friendStatus: isFriend,
+  })
+})
+
+account.use(authMiddleware)
+
+account.get('/', async (c) => {
+  const user = c.get('user')
+
+  const userData = await dao.user.get(user.id)
+
+  return c.json({
+    id: utils.encrypt(user.id.toString(), 'user'),
+    username: userData.firstname,
+    image: userData.image,
+    isAdmin: utils.isAdmin(user),
   })
 })
 

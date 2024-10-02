@@ -3,10 +3,11 @@ import { HTTPException } from 'hono/http-exception'
 
 import dao from 'dao'
 import utils from '@core/utils'
+import config from 'config'
 
+import { authMiddleware, getUser } from 'service/auth'
 import locationService from 'service/location'
 import geocoderService from 'service/geocoder'
-import config from 'config'
 
 const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -14,6 +15,17 @@ const isAuthorized = async (id: number, userId: number) => {
   const loc = await dao.location.getUser(id)
   if (loc?.user_id !== userId) throw new HTTPException(403, { message: 'User unauthorized' })
 }
+
+location.get('/:id', async (c) => {
+  const user = getUser(c)
+  const encryptedId = c.req.param('id')
+  const id = parseInt(utils.decrypt(encryptedId, 'location'))
+
+  const item = await dao.location.get(id, user?.id)
+  return c.json(locationService.formatLocation(item))
+})
+
+location.use(authMiddleware)
 
 location.get('/filter', async (c) => {
   const user = c.get('user')
@@ -52,15 +64,6 @@ location.post('/map', async (c) => {
 
   const data = await locationService.getLocations(user, { string, categories, countries, sources })
   return c.json(data)
-})
-
-location.get('/:id', async (c) => {
-  const user = c.get('user')
-  const encryptedId = c.req.param('id')
-  const id = parseInt(utils.decrypt(encryptedId, 'location'))
-
-  const item = await dao.location.get(id, user.id)
-  return c.json(locationService.formatLocation(item))
 })
 
 location.get('/', async (c) => {

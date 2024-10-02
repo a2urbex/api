@@ -3,9 +3,12 @@ import { HTTPException } from 'hono/http-exception'
 
 import utils from '@core/utils'
 import dao from 'dao'
+
+import { authMiddleware } from 'service/auth'
 import userService from 'service/user'
 
 const friend = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+friend.use(authMiddleware)
 
 friend.get('/', async (c) => {
   const user = c.get('user')
