@@ -16,6 +16,7 @@ account.get('/:id', async (c) => {
   const locationCount = await dao.location.getUserCount(id)
   const friendCount = await dao.friend.getUserFriendsCount(id)
   const isFriend = await dao.friend.isFriend(user?.id, id)
+  const images = await dao.location.getImages(id)
 
   return c.json({
     username: userData.firstname,
@@ -28,6 +29,7 @@ account.get('/:id', async (c) => {
     urbexCount: locationCount.total,
     friendCount: friendCount.total,
     friendStatus: isFriend,
+    images: images.map((v: any) => v.image),
   })
 })
 
