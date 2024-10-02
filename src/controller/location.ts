@@ -16,7 +16,7 @@ const isAuthorized = async (id: number, userId: number) => {
   if (loc?.user_id !== userId) throw new HTTPException(403, { message: 'User unauthorized' })
 }
 
-location.get('/:id', async (c) => {
+location.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const user = getUser(c)
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'location'))

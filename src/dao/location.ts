@@ -107,6 +107,11 @@ const location = {
     return db.query(sql, [id], 0)
   },
 
+  getImages: (userId: number) => {
+    const sql = `SELECT image FROM location l WHERE user_id = ?`
+    return db.query(sql, [userId])
+  },
+
   add: (
     name: string,
     description: string,

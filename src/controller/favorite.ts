@@ -16,7 +16,7 @@ const isAuthorized = async (id: number, userId: number) => {
   return users.length
 }
 
-favorite.get('/:id', async (c) => {
+favorite.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const user = getUser(c)
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
