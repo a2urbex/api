@@ -10,13 +10,15 @@ const mysql = {
 export default {
   port: process.env.PORT,
   mysql: mysql,
-  frontUrl: process.env.FRONT_URL || '',
-  apiUrl: process.env.API_URL || '',
+  frontUrl: process.env.FRONT_URL as string,
+  apiUrl: process.env.API_URL as string,
+  forgotPasswordUrl: process.env.FORGOT_PASSWORD_URL as string,
+
   password: {
     secret: process.env.PASSWORD_SECRET,
     salt: process.env.PASSWORD_SALT ? parseInt(process.env.PASSWORD_SALT) : 10,
   },
-  jwtSecret: process.env.JWT_SECRET || '',
+  jwtSecret: process.env.JWT_SECRET as string,
   pageSize: process.env.PAGE_SIZE ? parseInt(process.env.PAGE_SIZE) : 50,
   encryption: {
     method: process.env.ENCRYPT_METHOD,
@@ -26,10 +28,19 @@ export default {
     user: process.env.USER_SECRET,
   },
 
-  image: {
-    location: process.env.LOCATION_IMAGE_PATH || '',
-    user: process.env.USER_IMAGE_PATH || '',
+  path: {
+    location: process.env.LOCATION_IMAGE_PATH as string,
+    user: process.env.USER_IMAGE_PATH as string,
+    mail: process.env.MAIL_HTML_PATH as string,
   },
 
   googleApiKey: process.env.GOOGLE_API_KEY,
+
+  mail: {
+    service: process.env.MAIL_SERVICE,
+    host: process.env.MAIL_HOST,
+    port: process.env.MAIL_PORT,
+    user: process.env.MAIL_USER,
+    password: process.env.MAIL_PASSWORD,
+  },
 }

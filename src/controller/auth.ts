@@ -6,6 +6,7 @@ import bcrypt from 'bcrypt'
 import utils from '@core/utils'
 import config from 'config'
 import dao from 'dao'
+import mailService from 'service/mail'
 
 const auth = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -59,7 +60,10 @@ auth.post('/password/forgot', async (c) => {
 
   await dao.token.add('password_reset', token, date, exist.id)
 
-  return c.json({ token })
+  const url = `${config.forgotPasswordUrl}/${token}`
+  await mailService.resetPassword(exist.email, exist.firstname, url)
+
+  return c.json({})
 })
 
 auth.post('/password/reset', async (c) => {
