@@ -80,7 +80,7 @@ location.post('/', async (c) => {
   const country = await geocoderService.getCountry(body.lat, body.lon)
 
   let image: any = null
-  if (body.image) image = await utils.saveImage(body.image, config.image.location)
+  if (body.image) image = await utils.saveImage(body.image, config.path.location)
 
   await dao.location.add(body.name, body.description, image, body.lat, body.lon, body.categoryId, country?.id, user.id)
 
@@ -106,7 +106,7 @@ location.put('/:id', async (c) => {
   let image = loc.image
   if (body.image) {
     await utils.deleteImage(image)
-    image = await utils.saveImage(body.image, config.image.location)
+    image = await utils.saveImage(body.image, config.path.location)
   }
 
   await dao.location.update(id, body.name, body.description, image, body.lat, body.lon, body.categoryId, countryId)

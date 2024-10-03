@@ -11,7 +11,7 @@ const user = {
   },
 
   exist: (email: string) => {
-    const sql = `SELECT id, email, password, roles, old FROM user WHERE email = ?`
+    const sql = `SELECT id, email, password, roles, old, firstname FROM user WHERE email = ?`
     return db.query(sql, [email], 0)
   },
 
