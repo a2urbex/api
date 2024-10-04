@@ -79,7 +79,7 @@ const location = {
       LEFT JOIN category c ON c.id = l.category_id
       LEFT JOIN favorite_location fl ON fl.location_id = l.id
       LEFT JOIN favorite_user fu ON fu.favorite_id = fl.favorite_id
-      WHERE 1 ${WHERE}
+      WHERE 1 ${WHERE} AND l.lat IS NOT NULL AND l.lon IS NOT NULL
       GROUP BY l.id
       ${LIMIT}
     `
