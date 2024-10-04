@@ -30,7 +30,7 @@ favorite.get('/:id{[0-9a-z]{24,}}', async (c) => {
   if (isPrivate) throw new HTTPException(403, { message: 'Favorite is private' })
 
   const data = await locationService.getLocations(user, { favoriteId: id })
-  return c.json({ name: fav.name, list: data })
+  return c.json({ name: fav.name, ...data })
 })
 
 favorite.use(authMiddleware)
