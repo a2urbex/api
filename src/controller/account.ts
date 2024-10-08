@@ -19,7 +19,7 @@ account.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const images = await dao.location.getImages(id)
 
   return c.json({
-    username: userData.firstname,
+    username: userData.username,
     about: userData.about,
     youtube: userData.youtube,
     tiktok: userData.tiktok,
@@ -42,7 +42,7 @@ account.get('/', async (c) => {
 
   return c.json({
     id: utils.encrypt(user.id.toString(), 'user'),
-    username: userData.firstname,
+    username: userData.username,
     image: userData.image,
     isAdmin: utils.isAdmin(user),
   })

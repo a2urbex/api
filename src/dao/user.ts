@@ -6,18 +6,18 @@ const user = {
   },
 
   get: (id: number) => {
-    const sql = `SELECT id, email, firstname, lastname, about, youtube, tiktok, instagram, image, banner FROM user WHERE id = ?`
+    const sql = `SELECT id, email, username, about, youtube, tiktok, instagram, image, banner FROM user WHERE id = ?`
     return db.query(sql, [id], 0)
   },
 
   exist: (email: string) => {
-    const sql = `SELECT id, email, password, roles, old, firstname FROM user WHERE email = ?`
+    const sql = `SELECT id, email, password, roles, old, username FROM user WHERE email = ?`
     return db.query(sql, [email], 0)
   },
 
-  add: (email: string, password: string, firstname: string, lastname: string) => {
-    const sql = `INSERT INTO user (email, password, firstname, lastname, roles, last_active_at) VALUES (?, ?, ?, ?, "[]", NOW())`
-    return db.query(sql, [email, password, firstname, lastname])
+  add: (email: string, password: string, username: string) => {
+    const sql = `INSERT INTO user (email, password, username, roles, last_active_at) VALUES (?, ?, ?, "[]", NOW())`
+    return db.query(sql, [email, password, username])
   },
 
   updatePassword: (id: number, password: string, old: boolean = false) => {
@@ -26,11 +26,11 @@ const user = {
   },
 
   getFavoriteSearch: (ids: number[], str: string) => {
-    const sql = `SELECT id, firstname, image FROM user WHERE id IN (?) AND firstname LIKE ? LIMIT 10`
+    const sql = `SELECT id, username, image FROM user WHERE id IN (?) AND username LIKE ? LIMIT 10`
     return db.query(sql, [ids, `%${str}%`])
   },
   getFriendSearch: (ids: number[], str: string) => {
-    const sql = `SELECT id, firstname, image FROM user WHERE id NOT IN (?) AND firstname LIKE ? LIMIT 10`
+    const sql = `SELECT id, username, image FROM user WHERE id NOT IN (?) AND username LIKE ? LIMIT 10`
     return db.query(sql, [ids, `%${str}%`])
   },
 }
