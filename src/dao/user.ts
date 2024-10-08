@@ -20,7 +20,7 @@ const user = {
     return db.query(sql, [email, password, firstname, lastname])
   },
 
-  updatePassword: (id: number, password: string, old: number = 0) => {
+  updatePassword: (id: number, password: string, old: boolean = false) => {
     const sql = `UPDATE user SET password = ?, old = ? WHERE id = ?`
     return db.query(sql, [password, old, id])
   },
