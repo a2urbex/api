@@ -7,7 +7,7 @@ import { authMiddleware, getUser } from 'service/auth'
 
 const account = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
-account.get('/:id', async (c) => {
+account.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const user = getUser(c)
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'user'))
@@ -19,7 +19,7 @@ account.get('/:id', async (c) => {
   const images = await dao.location.getImages(id)
 
   return c.json({
-    username: userData.firstname,
+    username: userData.username,
     about: userData.about,
     youtube: userData.youtube,
     tiktok: userData.tiktok,
@@ -42,10 +42,17 @@ account.get('/', async (c) => {
 
   return c.json({
     id: utils.encrypt(user.id.toString(), 'user'),
-    username: userData.firstname,
+    username: userData.username,
     image: userData.image,
     isAdmin: utils.isAdmin(user),
   })
+})
+
+account.get('/details', async (c) => {
+  const user = c.get('user')
+
+  const userData = await dao.user.get(user.id)
+  return c.json(userData)
 })
 
 export default account

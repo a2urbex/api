@@ -22,13 +22,13 @@ auth.post('/login', async (c) => {
   if (exist.old) return c.json({ old: true })
 
   const match = await bcrypt.compare(config.password.secret + password, exist.password)
-  if (!match) throw new HTTPException(401, { message: 'Invalid password.' })
+  if (!match) throw new HTTPException(403, { message: 'Invalid password.' })
 
   return c.json({ token: createJwt(exist.id, email, JSON.parse(exist.roles), keepMeLoggedIn ? 3600 * 24 * 365 : 3600) })
 })
 
 auth.post('/register', async (c) => {
-  const { email, password, firstname, lastname } = await c.req.json()
+  const { email, password, username } = await c.req.json()
 
   const verify1 = utils.validator.email(email)
   if (!verify1) throw new HTTPException(400, { message: 'Invalid email' })
@@ -40,7 +40,7 @@ auth.post('/register', async (c) => {
   if (exist) throw new HTTPException(409, { message: 'User already exist' })
 
   const hash = await bcrypt.hash(config.password.secret + password, config.password.salt)
-  const add = await dao.user.add(email, hash, firstname, lastname)
+  const add = await dao.user.add(email, hash, username)
 
   const addFavorite = await dao.favorite.add('like', true)
   await dao.favorite.addUser(addFavorite.insertId, add.insertId)
@@ -61,7 +61,7 @@ auth.post('/password/forgot', async (c) => {
   await dao.token.add('password_reset', token, date, exist.id)
 
   const url = `${config.forgotPasswordUrl}/${token}`
-  await mailService.resetPassword(exist.email, exist.firstname, url)
+  await mailService.resetPassword(exist.email, exist.username, url)
 
   return c.json({})
 })

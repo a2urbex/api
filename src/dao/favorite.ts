@@ -53,7 +53,7 @@ const favorite = {
   },
   getUsersInfo: async (id: number) => {
     const sql = `
-      SELECT u.id, u.firstname, u.image FROM favorite_user fu
+      SELECT u.id, u.username, u.image FROM favorite_user fu
       INNER JOIN user u ON u.id = fu.user_id
       WHERE fu.favorite_id = ?
     `
