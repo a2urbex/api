@@ -168,13 +168,13 @@ favorite.get('/:id/search', async (c) => {
   return c.json(userService.formatUsers(list))
 })
 
-favorite.put('/:id/user', async (c) => {
+favorite.put('/:id/user/:userId', async (c) => {
   const user = c.get('user')
-  const { userId } = await c.req.json()
   const encryptedId = c.req.param('id')
+  const encryptedUserId = c.req.param('userId')
 
   const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
-  const usrId = parseInt(utils.decrypt(userId, 'user'))
+  const usrId = parseInt(utils.decrypt(encryptedUserId, 'user'))
 
   await isAuthorized(id, user.id)
 
