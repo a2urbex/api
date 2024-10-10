@@ -82,6 +82,7 @@ const location = {
       WHERE 1 ${WHERE} AND l.lat IS NOT NULL AND l.lon IS NOT NULL
       GROUP BY l.id
       ${LIMIT}
+      ORDER BY id DESC
     `
 
     return db.query(sql, [userId, ...params])
