@@ -81,8 +81,8 @@ const location = {
       LEFT JOIN favorite_user fu ON fu.favorite_id = fl.favorite_id
       WHERE 1 ${WHERE} AND l.lat IS NOT NULL AND l.lon IS NOT NULL
       GROUP BY l.id
-      ${LIMIT}
       ORDER BY id DESC
+      ${LIMIT}
     `
 
     return db.query(sql, [userId, ...params])
