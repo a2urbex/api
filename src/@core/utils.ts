@@ -71,6 +71,7 @@ const utils = {
     try {
       await fs.writeFile(imgPath, buffer)
     } catch (e) {
+      console.log(e)
       throw new HTTPException(500, { message: 'Error uploading image' })
     }
 
