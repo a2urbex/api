@@ -66,7 +66,7 @@ const utils = {
     if (!imgType) throw new HTTPException(422, { message: 'Unauthorized image format' })
 
     const imgPath = `${path}/${utils.generateRandomString(16)}.${imgType}`
-    const buffer = Buffer.from(await img.arrayBuffer())
+    const buffer = await img.arrayBuffer()
 
     try {
       await fs.writeFile(imgPath, buffer)
