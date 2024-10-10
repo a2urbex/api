@@ -75,7 +75,7 @@ location.get('/', async (c) => {
 
 location.post('/', async (c) => {
   const user = c.get('user')
-  const body: any = await c.req.parseBody()
+  const body: any = await c.req.json()
 
   const country = await geocoderService.getCountry(body.lat, body.lon)
 
