@@ -4,7 +4,7 @@ import { HTTPException } from 'hono/http-exception'
 import utils from '@core/utils'
 import dao from 'dao'
 
-import { authMiddleware } from 'service/auth'
+import { authMiddleware } from 'service/middleware'
 import userService from 'service/user'
 
 const friend = new Hono<{ Bindings: Bindings; Variables: Variables }>()

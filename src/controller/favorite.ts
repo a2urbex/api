@@ -4,17 +4,11 @@ import { HTTPException } from 'hono/http-exception'
 import dao from 'dao'
 import utils from '@core/utils'
 
-import { authMiddleware, getUser } from 'service/auth'
+import { authMiddleware, favoriteMiddleware, getUser } from 'service/middleware'
 import locationService from 'service/location'
 import userService from 'service/user'
 
 const favorite = new Hono<{ Bindings: Bindings; Variables: Variables }>()
-
-const isAuthorized = async (id: number, userId: number) => {
-  const users = await dao.favorite.getUsers(id)
-  if (!users.includes(userId)) throw new HTTPException(403, { message: 'User unauthorized' })
-  return users.length
-}
 
 favorite.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const user = getUser(c)
@@ -81,15 +75,13 @@ favorite.post('/', async (c) => {
   return c.json({ id: utils.encrypt(add.insertId.toString(), 'favorite') })
 })
 
-favorite.put('/:id/location/:locationId', async (c) => {
+favorite.put('/:id/location/:locationId', favoriteMiddleware, async (c) => {
   const user = c.get('user')
-  const encryptedId = c.req.param('id')
-  const encryptedLocationId = c.req.param('locationId')
+  const id = c.get('id')
 
-  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+  const encryptedLocationId = c.req.param('locationId')
   const locId = parseInt(utils.decrypt(encryptedLocationId, 'location'))
 
-  await isAuthorized(id, user.id)
   await locationService.hasAccess(locId, user)
 
   const has = await dao.favorite.hasLocation(id, locId)
@@ -99,19 +91,18 @@ favorite.put('/:id/location/:locationId', async (c) => {
   return c.json({})
 })
 
-favorite.delete('/:id', async (c) => {
+favorite.delete('/:id', favoriteMiddleware, async (c) => {
   const user = c.get('user')
-  const encryptedId = c.req.param('id')
-  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
+  const id = c.get('id')
 
-  const userCount = await isAuthorized(id, user.id)
+  const users = await dao.favorite.getUsers(id)
 
   const fav = await dao.favorite.get(id)
   if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be deleted" })
 
   await dao.favorite.deleteUser(id, user.id)
 
-  if (userCount === 1) {
+  if (users.length === 1) {
     await dao.favorite.deleteLocations(id)
     await dao.favorite.delete(id)
   }
@@ -119,12 +110,8 @@ favorite.delete('/:id', async (c) => {
   return c.json({})
 })
 
-favorite.put('/:id/disable', async (c) => {
-  const user = c.get('user')
-  const encryptedId = c.req.param('id')
-  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
-
-  await isAuthorized(id, user.id)
+favorite.put('/:id/disable', favoriteMiddleware, async (c) => {
+  const id = c.get('id')
 
   const fav = await dao.favorite.get(id)
   if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be disabled" })
@@ -134,12 +121,8 @@ favorite.put('/:id/disable', async (c) => {
   return c.json({})
 })
 
-favorite.put('/:id/share', async (c) => {
-  const user = c.get('user')
-  const encryptedId = c.req.param('id')
-  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
-
-  await isAuthorized(id, user.id)
+favorite.put('/:id/share', favoriteMiddleware, async (c) => {
+  const id = c.get('id')
 
   const fav = await dao.favorite.get(id)
   if (fav.master) throw new HTTPException(403, { message: "Master favorite can't be shared" })
@@ -149,15 +132,12 @@ favorite.put('/:id/share', async (c) => {
   return c.json({})
 })
 
-favorite.get('/:id/search', async (c) => {
+favorite.get('/:id/search', favoriteMiddleware, async (c) => {
   const user = c.get('user')
+  const id = c.get('id')
+
   const string = c.req.queries('string')
   const str = string ? string[0] : ''
-
-  const encryptedId = c.req.param('id')
-  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
-
-  await isAuthorized(id, user.id)
 
   const users = await dao.favorite.getUsers(id)
   const friends = await dao.friend.getUserFriends(user.id)
@@ -168,15 +148,11 @@ favorite.get('/:id/search', async (c) => {
   return c.json(userService.formatUsers(list))
 })
 
-favorite.put('/:id/user/:userId', async (c) => {
-  const user = c.get('user')
-  const encryptedId = c.req.param('id')
+favorite.put('/:id/user/:userId', favoriteMiddleware, async (c) => {
+  const id = c.get('id')
+
   const encryptedUserId = c.req.param('userId')
-
-  const id = parseInt(utils.decrypt(encryptedId, 'favorite'))
   const usrId = parseInt(utils.decrypt(encryptedUserId, 'user'))
-
-  await isAuthorized(id, user.id)
 
   const users = await dao.favorite.getUsers(id)
   if (users.includes(usrId)) throw new HTTPException(400, { message: 'User already in favorite' })
