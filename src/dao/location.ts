@@ -73,7 +73,7 @@ const location = {
     const [WHERE, params, LIMIT] = location.getFilters(filters)
 
     const sql = `
-      SELECT l.id, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
+      SELECT l.id, l.lat, l.lon, l.name, l.image, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
         GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
       LEFT JOIN category c ON c.id = l.category_id

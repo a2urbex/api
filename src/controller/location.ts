@@ -11,6 +11,14 @@ import geocoderService from 'service/geocoder'
 
 const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
+/**
+ * GET /location/:id
+ *  @description Get a location
+ *
+ * route @param {string} id - Location encoded id
+ *
+ * @returns {Location}
+ */
 location.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const user = getUser(c)
   const encryptedId = c.req.param('id')
@@ -20,11 +28,20 @@ location.get('/:id{[0-9a-z]{24,}}', async (c) => {
   return c.json(locationService.formatLocation(item))
 })
 
+/**
+ * Auth middleware to verify if the user is logged in for all routes below
+ */
 location.use(authMiddleware)
 
+/**
+ * GET /location/filter
+ *  @description Get all filters for search
+ *
+ * @returns {LocationFilters}
+ */
 location.get('/filter', async (c) => {
   const user = c.get('user')
-  const out: any = {
+  const out: LocationFilters = {
     categories: {},
     countries: {},
   }
@@ -38,12 +55,24 @@ location.get('/filter', async (c) => {
   if (utils.isSuperUser(user)) {
     out.sources = {}
     const sourceRaw = await dao.source.getList()
-    sourceRaw.forEach((item: any) => (out.sources[item.name] = item.name))
+    sourceRaw.forEach((item: any) => (out.sources![item.name] = item.name))
   }
 
   return c.json(out)
 })
 
+/**
+ * POST /location/p/:page
+ *  @description Get location list by page
+ *
+ * route @param {number} page - Location page number
+ * body @param {string} string - Optional - Search string
+ * body @param {number[]} categories - Optional - Categories ids
+ * body @param {number[]} countries - Optional - Countries ids
+ * body @param {string[]} sources - Optional - Sources names
+ *
+ * @returns {Location[]}
+ */
 location.post('/p/:page{[0-9]+}', async (c) => {
   const user = c.get('user')
   const page = parseInt(c.req.param('page'))
@@ -53,6 +82,17 @@ location.post('/p/:page{[0-9]+}', async (c) => {
   return c.json(data)
 })
 
+/**
+ * POST /location/p/:page
+ *  @description Get map locations
+ *
+ * body @param {string} string - Optional - Search string
+ * body @param {number[]} categories - Optional - Categories ids
+ * body @param {number[]} countries - Optional - Countries ids
+ * body @param {string[]} sources - Optional - Sources names
+ *
+ * @returns {Location[]}
+ */
 location.post('/map', async (c) => {
   const user = c.get('user')
   const { string, categories, countries, sources } = await c.req.json()
@@ -61,6 +101,12 @@ location.post('/map', async (c) => {
   return c.json(data)
 })
 
+/**
+ * GET /location
+ * @description Get user locations
+ *
+ * @returns {Location[]}
+ */
 location.get('/', async (c) => {
   const user = c.get('user')
 
@@ -68,6 +114,17 @@ location.get('/', async (c) => {
   return c.json(data)
 })
 
+/**
+ * POST /location
+ * @description Add location
+ *
+ * formData @param {string} name - Name
+ * formData @param {string} description - Description
+ * formData @param {number} lat - Latitude
+ * formData @param {number} lon - Longitude
+ * formData @param {number} categoryId - Category id
+ * formData @param {File} image - Optional - Image
+ */
 location.post('/', async (c) => {
   const user = c.get('user')
   const body: any = await c.req.parseBody()
@@ -82,6 +139,18 @@ location.post('/', async (c) => {
   return c.json({})
 })
 
+/**
+ * PUT /location/:id
+ * @description Edit location
+ *
+ * route @param {string} id - Location encoded id
+ * formData @param {string} name - Name
+ * formData @param {string} description - Description
+ * formData @param {number} lat - Latitude
+ * formData @param {number} lon - Longitude
+ * formData @param {number} categoryId - Category Id
+ * formData @param {File} image - Optional - Image
+ */
 location.put('/:id', locationMiddleware, async (c) => {
   const id = c.get('id')
   const body: any = await c.req.parseBody()
@@ -105,6 +174,12 @@ location.put('/:id', locationMiddleware, async (c) => {
   return c.json({})
 })
 
+/**
+ * POST /location
+ * @description Add location
+ *
+ * route @param {string} id - Location encoded id
+ */
 location.delete('/:id', locationMiddleware, async (c) => {
   const id = c.get('id')
 
