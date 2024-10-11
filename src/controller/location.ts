@@ -5,16 +5,11 @@ import dao from 'dao'
 import utils from '@core/utils'
 import config from 'config'
 
-import { authMiddleware, getUser } from 'service/auth'
+import { authMiddleware, getUser, locationMiddleware } from 'service/middleware'
 import locationService from 'service/location'
 import geocoderService from 'service/geocoder'
 
 const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
-
-const isAuthorized = async (id: number, userId: number) => {
-  const loc = await dao.location.getUser(id)
-  if (loc?.user_id !== userId) throw new HTTPException(403, { message: 'User unauthorized' })
-}
 
 location.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const user = getUser(c)
@@ -87,13 +82,9 @@ location.post('/', async (c) => {
   return c.json({})
 })
 
-location.put('/:id', async (c) => {
-  const user = c.get('user')
+location.put('/:id', locationMiddleware, async (c) => {
+  const id = c.get('id')
   const body: any = await c.req.parseBody()
-  const encryptedId = c.req.param('id')
-  const id = parseInt(utils.decrypt(encryptedId, 'location'))
-
-  await isAuthorized(id, user.id)
 
   const loc = await dao.location.getRaw(id)
 
@@ -114,12 +105,8 @@ location.put('/:id', async (c) => {
   return c.json({})
 })
 
-location.delete('/:id', async (c) => {
-  const user = c.get('user')
-  const encryptedId = c.req.param('id')
-  const id = parseInt(utils.decrypt(encryptedId, 'location'))
-
-  await isAuthorized(id, user.id)
+location.delete('/:id', locationMiddleware, async (c) => {
+  const id = c.get('id')
 
   const loc = await dao.location.getRaw(id)
 

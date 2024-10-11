@@ -3,7 +3,7 @@ import { Hono } from 'hono'
 import dao from 'dao'
 import utils from '@core/utils'
 
-import { authMiddleware, getUser } from 'service/auth'
+import { authMiddleware, getUser } from 'service/middleware'
 
 const account = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 

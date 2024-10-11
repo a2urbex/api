@@ -11,6 +11,7 @@ type db = import('@core/Db').default
 type Bindings = {}
 type Variables = {
   user: User
+  id: number
 }
 
 interface User {
