@@ -29,3 +29,21 @@ interface SearchFilters {
   page?: number
   favoriteId?: number
 }
+
+interface Location {
+  id: number
+  lat: number
+  lon: number
+  name: string
+  image: string
+  categoryName: string
+  categoryIcon: string
+  categoryColor: string
+  fids: string[]
+}
+
+interface LocationFilters {
+  categories: { [key: string]: string }
+  countries: { [key: string]: string }
+  sources?: { [key: string]: string }
+}
