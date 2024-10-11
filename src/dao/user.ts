@@ -26,10 +26,12 @@ const user = {
   },
 
   getFavoriteSearch: (ids: number[], str: string) => {
+    if (!ids.length) ids.push(0)
     const sql = `SELECT id, username, image FROM user WHERE id IN (?) AND username LIKE ? LIMIT 10`
     return db.query(sql, [ids, `%${str}%`])
   },
   getFriendSearch: (ids: number[], str: string) => {
+    if (!ids.length) ids.push(0)
     const sql = `SELECT id, username, image FROM user WHERE id NOT IN (?) AND username LIKE ? LIMIT 10`
     return db.query(sql, [ids, `%${str}%`])
   },
