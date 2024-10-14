@@ -14,6 +14,16 @@ const createJwt = (id: number, email: string, roles = [], duration: number = 360
   return jwt.sign({ id, email, roles }, config.jwtSecret, { expiresIn: duration })
 }
 
+/**
+ * POST /auth/login
+ * @description User login
+ *
+ * body @param {string} email - Email
+ * body @param {string} password - Password
+ * body @param {boolean} keepMeLoggedIn - Stay connected
+ *
+ * @returns {{token: string}}
+ */
 auth.post('/login', async (c) => {
   const { email, password, keepMeLoggedIn } = await c.req.json()
 
@@ -27,6 +37,16 @@ auth.post('/login', async (c) => {
   return c.json({ token: createJwt(exist.id, email, JSON.parse(exist.roles), keepMeLoggedIn ? 3600 * 24 * 365 : 3600) })
 })
 
+/**
+ * POST /auth/register
+ * @description User register
+ *
+ * body @param {string} email - Email
+ * body @param {string} password - Password
+ * body @param {string} username - Username
+ *
+ * @returns {{token: string}}
+ */
 auth.post('/register', async (c) => {
   const { email, password, username } = await c.req.json()
 
@@ -48,6 +68,12 @@ auth.post('/register', async (c) => {
   return c.json({ token: createJwt(add.insertId, email) })
 })
 
+/**
+ * POST /auth/password/forgot
+ * @description Send password reset email
+ *
+ * body @param {string} email - Email
+ */
 auth.post('/password/forgot', async (c) => {
   const { email } = await c.req.json()
 
@@ -66,6 +92,13 @@ auth.post('/password/forgot', async (c) => {
   return c.json({})
 })
 
+/**
+ * POST /auth/password/forgot
+ * @description Reset user password
+ *
+ * body @param {string} token - Token
+ * body @param {string} password - Password
+ */
 auth.post('/password/reset', async (c) => {
   const { token, password } = await c.req.json()
 
