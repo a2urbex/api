@@ -10,6 +10,14 @@ import userService from 'service/user'
 
 const favorite = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
+/**
+ * GET /favorite/:id
+ * @description Get a favorite with it's location
+ *
+ * route @param {string} id - Favorite encoded id
+ *
+ * @returns {{name: string, count: number, list: Location[]}}
+ */
 favorite.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const user = getUser(c)
   const encryptedId = c.req.param('id')
@@ -27,20 +35,37 @@ favorite.get('/:id{[0-9a-z]{24,}}', async (c) => {
   return c.json({ name: fav.name, ...data })
 })
 
+/**
+ * Auth middleware to verify if the user is logged in for all routes below
+ */
 favorite.use(authMiddleware)
 
+/**
+ * GET /favorite/summary
+ * @description Get user favorites summary
+ *
+ * @returns {Favorite[]}
+ */
 favorite.get('/summary', async (c) => {
   const user = c.get('user')
 
   const data = await dao.favorite.getList(user.id)
-  const list = data.map((item: any) => {
-    item.id = utils.encrypt(item.id.toString(), 'favorite')
-    return item
-  })
+  const list = data
+    .map((item: any) => {
+      item.id = utils.encrypt(item.id.toString(), 'favorite')
+      return item
+    })
+    .filter((item: any) => !item.disabled)
 
   return c.json(list)
 })
 
+/**
+ * GET /favorite
+ * @description Get user favorites
+ *
+ * @returns {Favorite[]}
+ */
 favorite.get('/', async (c) => {
   const user = c.get('user')
 
@@ -58,6 +83,15 @@ favorite.get('/', async (c) => {
   return c.json(list)
 })
 
+/**
+ * POST /favorite
+ * @description Create favorite with location (optional)
+ *
+ * body @param {string} name - Favorite name
+ * body @param {string} locationId - Optional - Location encoded id
+ *
+ * @returns {{id: string}}
+ */
 favorite.post('/', async (c) => {
   const user = c.get('user')
   const { name, locationId } = await c.req.json()
@@ -75,6 +109,13 @@ favorite.post('/', async (c) => {
   return c.json({ id: utils.encrypt(add.insertId.toString(), 'favorite') })
 })
 
+/**
+ * PUT /favorite/:id/location/:locationId
+ * @description Toggle favorite location
+ *
+ * route @param {string} id - Favorite encoded id
+ * route @param {string} locationId - Location encoded id
+ */
 favorite.put('/:id/location/:locationId', favoriteMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.get('id')
@@ -91,6 +132,12 @@ favorite.put('/:id/location/:locationId', favoriteMiddleware, async (c) => {
   return c.json({})
 })
 
+/**
+ * DELETE /favorite/:id
+ * @description Delete favorite
+ *
+ * body @param {string} id - Favorite encoded id
+ */
 favorite.delete('/:id', favoriteMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.get('id')
@@ -110,6 +157,12 @@ favorite.delete('/:id', favoriteMiddleware, async (c) => {
   return c.json({})
 })
 
+/**
+ * PUT /favorite/:id/disable
+ * @description Toggle favorite from summary
+ *
+ * body @param {string} id - Favorite encoded id
+ */
 favorite.put('/:id/disable', favoriteMiddleware, async (c) => {
   const id = c.get('id')
 
@@ -121,6 +174,12 @@ favorite.put('/:id/disable', favoriteMiddleware, async (c) => {
   return c.json({})
 })
 
+/**
+ * PUT /favorite/:id/share
+ * @description Toggle favorite share
+ *
+ * body @param {string} id - Favorite encoded id
+ */
 favorite.put('/:id/share', favoriteMiddleware, async (c) => {
   const id = c.get('id')
 
@@ -132,6 +191,12 @@ favorite.put('/:id/share', favoriteMiddleware, async (c) => {
   return c.json({})
 })
 
+/**
+ * GET /favorite/:id/search
+ * @description Search for users who are not in favorite
+ *
+ * body @param {string} id - Favorite encoded id
+ */
 favorite.get('/:id/search', favoriteMiddleware, async (c) => {
   const user = c.get('user')
   const id = c.get('id')
@@ -148,6 +213,13 @@ favorite.get('/:id/search', favoriteMiddleware, async (c) => {
   return c.json(userService.formatUsers(list))
 })
 
+/**
+ * PUT /favorite/:id/user/:userId
+ * @description Add user to favorite
+ *
+ * body @param {string} id - Favorite encoded id
+ * body @param {string} userId - User encoded id
+ */
 favorite.put('/:id/user/:userId', favoriteMiddleware, async (c) => {
   const id = c.get('id')
 

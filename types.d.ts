@@ -53,3 +53,12 @@ interface Friend {
   username: string
   image: string
 }
+
+interface Favorite {
+  id: string
+  name: string
+  share: boolean
+  disabled: boolean
+  count: number
+  users?: string[]
+}

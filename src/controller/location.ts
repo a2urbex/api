@@ -13,7 +13,7 @@ const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 /**
  * GET /location/:id
- *  @description Get a location
+ * @description Get a location
  *
  * route @param {string} id - Location encoded id
  *
@@ -35,7 +35,7 @@ location.use(authMiddleware)
 
 /**
  * GET /location/filter
- *  @description Get all filters for search
+ * @description Get all filters for search
  *
  * @returns {LocationFilters}
  */
@@ -63,7 +63,7 @@ location.get('/filter', async (c) => {
 
 /**
  * POST /location/p/:page
- *  @description Get location list by page
+ * @description Get location list by page
  *
  * route @param {number} page - Location page number
  * body @param {string} string - Optional - Search string
@@ -71,7 +71,7 @@ location.get('/filter', async (c) => {
  * body @param {number[]} countries - Optional - Countries ids
  * body @param {string[]} sources - Optional - Sources names
  *
- * @returns {Location[]}
+ * @returns {{count: number, list: Location[]}}
  */
 location.post('/p/:page{[0-9]+}', async (c) => {
   const user = c.get('user')
@@ -84,14 +84,14 @@ location.post('/p/:page{[0-9]+}', async (c) => {
 
 /**
  * POST /location/p/:page
- *  @description Get map locations
+ * @description Get map locations
  *
  * body @param {string} string - Optional - Search string
  * body @param {number[]} categories - Optional - Categories ids
  * body @param {number[]} countries - Optional - Countries ids
  * body @param {string[]} sources - Optional - Sources names
  *
- * @returns {Location[]}
+ * @returns {{count: number, list: Location[]}}
  */
 location.post('/map', async (c) => {
   const user = c.get('user')
@@ -105,7 +105,7 @@ location.post('/map', async (c) => {
  * GET /location
  * @description Get user locations
  *
- * @returns {Location[]}
+ * @returns {{count: number, list: Location[]}}
  */
 location.get('/', async (c) => {
   const user = c.get('user')

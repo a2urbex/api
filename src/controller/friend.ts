@@ -16,7 +16,7 @@ friend.use(authMiddleware)
 
 /**
  * GET /friend
- *  @description Get friends, pending friends and waiting approval friends
+ * @description Get friends, pending friends and waiting approval friends
  *
  * @returns {{
  *  pending: Friend[]
