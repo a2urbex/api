@@ -8,8 +8,22 @@ import { authMiddleware } from 'service/middleware'
 import userService from 'service/user'
 
 const friend = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+/**
+ * Auth middleware to verify if the user is logged in for all routes below
+ */
 friend.use(authMiddleware)
 
+/**
+ * GET /friend
+ *  @description Get friends, pending friends and waiting approval friends
+ *
+ * @returns {{
+ *  pending: Friend[]
+ *  waiting: Friend[]
+ *  friends: Friend[]
+ * }}
+ */
 friend.get('/', async (c) => {
   const user = c.get('user')
 
@@ -24,6 +38,14 @@ friend.get('/', async (c) => {
   })
 })
 
+/**
+ * GET /friend/search
+ * @description Search for users who are not friends
+ *
+ * query @param {string} string - Optional - Search string
+ *
+ * @returns {Friend[]}
+ */
 friend.get('/search', async (c) => {
   const user = c.get('user')
   const string = c.req.queries('string')
@@ -35,6 +57,14 @@ friend.get('/search', async (c) => {
   return c.json(userService.formatUsers(list))
 })
 
+/**
+ * POST /friend/:id
+ * @description Make friend request
+ *
+ * route @param {id} string - User id
+ *
+ * @returns {{ friend: boolean }}
+ */
 friend.post('/:id', async (c) => {
   const user = c.get('user')
   const encryptedId = c.req.param('id')
@@ -52,6 +82,12 @@ friend.post('/:id', async (c) => {
   return c.json({ friend: isFriend2 === 'pending' })
 })
 
+/**
+ * DELETE /friend/:id
+ * @description Delete friend
+ *
+ * route @param {id} string - User id
+ */
 friend.delete('/:id', async (c) => {
   const user = c.get('user')
   const encryptedId = c.req.param('id')
@@ -66,6 +102,12 @@ friend.delete('/:id', async (c) => {
   return c.json({})
 })
 
+/**
+ * PUT /friend/:id/cancel
+ * @description Cancel friend request
+ *
+ * route @param {id} string - User id
+ */
 friend.put('/:id/cancel', async (c) => {
   const user = c.get('user')
   const encryptedId = c.req.param('id')
@@ -79,6 +121,12 @@ friend.put('/:id/cancel', async (c) => {
   return c.json({})
 })
 
+/**
+ * PUT /friend/:id/accept
+ * @description Accept friend request
+ *
+ * route @param {id} string - User id
+ */
 friend.put('/:id/accept', async (c) => {
   const user = c.get('user')
   const encryptedId = c.req.param('id')
@@ -93,6 +141,12 @@ friend.put('/:id/accept', async (c) => {
   return c.json({})
 })
 
+/**
+ * PUT /friend/:id/decline
+ * @description Decline friend request
+ *
+ * route @param {id} string - User id
+ */
 friend.put('/:id/decline', async (c) => {
   const user = c.get('user')
   const encryptedId = c.req.param('id')
