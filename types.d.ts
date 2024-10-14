@@ -31,7 +31,7 @@ interface SearchFilters {
 }
 
 interface Location {
-  id: number
+  id: string
   lat: number
   lon: number
   name: string
@@ -46,4 +46,10 @@ interface LocationFilters {
   categories: { [key: string]: string }
   countries: { [key: string]: string }
   sources?: { [key: string]: string }
+}
+
+interface Friend {
+  id: string
+  username: string
+  image: string
 }
