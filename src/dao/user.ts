@@ -35,6 +35,31 @@ const user = {
     const sql = `SELECT id, username, image FROM user WHERE id NOT IN (?) AND username LIKE ? LIMIT 10`
     return db.query(sql, [ids, `%${str}%`])
   },
+
+  update: (
+    id: number,
+    about: string,
+    youtube: string,
+    tiktok: string,
+    instagram: string,
+    image: string | null = null,
+    banner: string | null = null
+  ) => {
+    let extraSql: string = ''
+    const extraParams: string[] = []
+
+    if (image) {
+      extraSql += ', image = ?'
+      extraParams.push(image)
+    }
+    if (banner) {
+      extraSql += ', banner = ?'
+      extraParams.push(banner)
+    }
+
+    const sql = `UPDATE user SET about = ?, youtube = ?, tiktok = ?, instagram = ?${extraSql} WHERE id = ?`
+    return db.query(sql, [about, youtube, tiktok, instagram, ...extraParams, id])
+  },
 }
 
 export default user
