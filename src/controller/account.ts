@@ -1,4 +1,6 @@
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
+import bcrypt from 'bcrypt'
 
 import dao from 'dao'
 import utils from '@core/utils'
@@ -120,6 +122,31 @@ account.put('/', async (c) => {
   }
 
   await dao.user.update(user.id, body.about, body.youtube, body.tiktok, body.instagram, image, banner)
+
+  return c.json({})
+})
+
+/**
+ * PUT /password
+ * @description Edit password
+ *
+ * formData @param {string} password - Password
+ * formData @param {string} newPassword - newPassword
+ */
+account.put('/password', async (c) => {
+  const user = c.get('user')
+  const body: any = await c.req.parseBody()
+
+  const current = await dao.user.getPassword(user.id)
+
+  const match = await bcrypt.compare(config.password.secret + body.password, current.password)
+  if (!match) throw new HTTPException(403, { message: 'Invalid password' })
+
+  const verify = utils.validator.password(body.newPassword)
+  if (!verify) throw new HTTPException(400, { message: 'Invalid new password' })
+
+  const hash = await bcrypt.hash(config.password.secret + body.newPassword, config.password.salt)
+  await dao.user.updatePassword(user.id, hash)
 
   return c.json({})
 })
