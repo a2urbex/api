@@ -75,6 +75,11 @@ const user = {
     const sql = `UPDATE user SET about = ?, youtube = ?, tiktok = ?, instagram = ?${extraSql} WHERE id = ?`
     return db.query(sql, [about, youtube, tiktok, instagram, ...extraParams, id])
   },
+
+  getPassword: (id: number) => {
+    const sql = `SELECT password FROM user WHERE id = ?`
+    return db.query(sql, [id], 0)
+  },
 }
 
 export default user
