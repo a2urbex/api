@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 
 import dao from 'dao'
 import utils from '@core/utils'
+import config from 'config'
 
 import { authMiddleware, getUser } from 'service/middleware'
 
@@ -86,6 +87,41 @@ account.get('/details', async (c) => {
     image: userData.image,
     banner: userData.banner,
   })
+})
+
+/**
+ * PUT /
+ * @description Edit profile
+ *
+ * formData @param {string} about - About
+ * formData @param {string} youtube - Youtube
+ * formData @param {string} Tiktok - Tiktok
+ * formData @param {string} instagram - Instagram
+ * formData @param {File} image - Optional - Image
+ * formData @param {File} banner - Optional - Banner
+ */
+account.put('/', async (c) => {
+  const user = c.get('user')
+  const body: any = await c.req.parseBody()
+
+  const userData = await dao.user.get(user.id)
+
+  let image: string | null = null
+  let banner: string | null = null
+
+  if (body.image) {
+    if (userData.image) await utils.deleteImage(userData.image)
+    image = await utils.saveImage(body.image, config.path.user)
+  }
+
+  if (body.banner) {
+    if (userData.banner) await utils.deleteImage(userData.banner)
+    banner = await utils.saveImage(body.banne, config.path.user)
+  }
+
+  await dao.user.update(user.id, body.about, body.youtube, body.tiktok, body.instagram, image, banner)
+
+  return c.json({})
 })
 
 export default account

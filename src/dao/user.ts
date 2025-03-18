@@ -50,6 +50,31 @@ const user = {
     const sql = `DELETE FROM user WHERE id = ?`
     return db.query(sql, [id])
   },
+
+  update: (
+    id: number,
+    about: string,
+    youtube: string,
+    tiktok: string,
+    instagram: string,
+    image: string | null = null,
+    banner: string | null = null
+  ) => {
+    let extraSql: string = ''
+    const extraParams: string[] = []
+
+    if (image) {
+      extraSql += ', image = ?'
+      extraParams.push(image)
+    }
+    if (banner) {
+      extraSql += ', banner = ?'
+      extraParams.push(banner)
+    }
+
+    const sql = `UPDATE user SET about = ?, youtube = ?, tiktok = ?, instagram = ?${extraSql} WHERE id = ?`
+    return db.query(sql, [about, youtube, tiktok, instagram, ...extraParams, id])
+  },
 }
 
 export default user
