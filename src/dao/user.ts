@@ -35,7 +35,7 @@ const user = {
   },
 
   getAll: () => {
-    const sql = `SELECT id, email, username, roles FROM user`
+    const sql = `SELECT id, image, username, roles FROM user`
     return db.query(sql)
   },
 }
