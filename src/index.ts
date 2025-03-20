@@ -11,6 +11,7 @@ import location from 'controller/location'
 import account from 'controller/account'
 import favorite from 'controller/favorite'
 import friend from 'controller/friend'
+import user from 'controller/user'
 
 start()
 
@@ -43,6 +44,7 @@ app.route('/location', location)
 app.route('/account', account)
 app.route('/favorite', favorite)
 app.route('/friend', friend)
+app.route('/users', user)
 
 export default {
   port: config.port,

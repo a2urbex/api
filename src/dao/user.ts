@@ -33,6 +33,11 @@ const user = {
     const sql = `SELECT id, username, image FROM user WHERE id NOT IN (?) AND username LIKE ? LIMIT 10`
     return db.query(sql, [ids, `%${str}%`])
   },
+
+  getAll: () => {
+    const sql = `SELECT id, email, username, roles FROM user`
+    return db.query(sql)
+  },
 }
 
 export default user
