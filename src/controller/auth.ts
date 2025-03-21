@@ -40,7 +40,7 @@ auth.post('/register', async (c) => {
   if (exist) throw new HTTPException(409, { message: 'User already exist' })
 
   const hash = await bcrypt.hash(config.password.secret + password, config.password.salt)
-  const add = await dao.user.add(email, hash, username)
+  const add = await dao.user.add(email, hash, username, ['ROLE_USER'])
 
   const addFavorite = await dao.favorite.add('like', true)
   await dao.favorite.addUser(addFavorite.insertId, add.insertId)

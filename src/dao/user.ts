@@ -15,9 +15,9 @@ const user = {
     return db.query(sql, [email], 0)
   },
 
-  add: (email: string, password: string, username: string) => {
-    const sql = `INSERT INTO user (email, password, username, roles, last_active_at) VALUES (?, ?, ?, "[]", NOW())`
-    return db.query(sql, [email, password, username])
+  add: (email: string, password: string, username: string, roles: string[]) => {
+    const sql = `INSERT INTO user (email, password, username, roles, last_active_at) VALUES (?, ?, ?, ?, NOW())`
+    return db.query(sql, [email, password, username, JSON.stringify(roles)])
   },
 
   updatePassword: (id: number, password: string, old: boolean = false) => {
