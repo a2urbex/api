@@ -43,6 +43,11 @@ const user = {
     const sql = `UPDATE user SET roles = ? WHERE id = ?`
     return db.query(sql, [JSON.stringify(roles), id])
   },
+
+  delete: (id: number) => {
+    const sql = `DELETE FROM user WHERE id = ?`
+    return db.query(sql, [id])
+  },
 }
 
 export default user

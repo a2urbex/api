@@ -39,4 +39,18 @@ user.put('/:id/roles', async (c) => {
   return c.json({ message: 'User roles updated successfully' })
 })
 
+user.delete('/:id', async (c) => {
+  const currentUser = c.get('user')
+  
+  if (!utils.isAdmin(currentUser)) {
+    throw new HTTPException(403, { message: 'Only administrators can delete users' })
+  }
+
+  const encryptedId = c.req.param('id')
+  const userId = parseInt(utils.decrypt(encryptedId, 'user'))
+
+  await dao.user.delete(userId)
+  return c.json({ message: 'User deleted successfully' })
+})
+
 export default user 
