@@ -20,4 +20,23 @@ user.get('/', async (c) => {
   return c.json(formattedUsers)
 })
 
+user.put('/:id/roles', async (c) => {
+  const currentUser = c.get('user')
+  
+  if (!utils.isAdmin(currentUser)) {
+    throw new HTTPException(403, { message: 'Only administrators can update user roles' })
+  }
+
+  const encryptedId = c.req.param('id')
+  const userId = parseInt(utils.decrypt(encryptedId, 'user'))
+  const { roles } = await c.req.json()
+
+  if (!Array.isArray(roles)) {
+    throw new HTTPException(400, { message: 'Roles must be an array' })
+  }
+
+  await dao.user.updateRoles(userId, roles)
+  return c.json({ message: 'User roles updated successfully' })
+})
+
 export default user 

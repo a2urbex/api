@@ -38,6 +38,11 @@ const user = {
     const sql = `SELECT id, image, username, email, roles FROM user`
     return db.query(sql)
   },
+
+  updateRoles: (id: number, roles: string[]) => {
+    const sql = `UPDATE user SET roles = ? WHERE id = ?`
+    return db.query(sql, [JSON.stringify(roles), id])
+  },
 }
 
 export default user
