@@ -73,7 +73,7 @@ const user = {
       extraParams.push(banner)
     }
 
-    const sql = `UPDATE user SET about = ?, youtube = ?, tiktok = ?, instagram = ?, is_private${extraSql} WHERE id = ?`
+    const sql = `UPDATE user SET about = ?, youtube = ?, tiktok = ?, instagram = ?, is_private = ?${extraSql} WHERE id = ?`
     return db.query(sql, [about, youtube, tiktok, instagram, isPrivate, ...extraParams, id])
   },
 

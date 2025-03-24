@@ -106,24 +106,24 @@ account.get('/details', async (c) => {
  */
 account.put('/', async (c) => {
   const user = c.get('user')
-  const body: any = await c.req.parseBody()
+  const { about, youtube, tiktok, instagram, isPrivate, image, banner }: any = await c.req.parseBody()
 
   const userData = await dao.user.get(user.id)
 
-  let image: string | null = null
-  let banner: string | null = null
+  let newImage: string | null = null
+  let newBanner: string | null = null
 
-  if (body.image) {
+  if (image) {
     if (userData.image) await utils.deleteImage(userData.image)
-    image = await utils.saveImage(body.image, config.path.user)
+    newImage = await utils.saveImage(image, config.path.user)
   }
 
-  if (body.banner) {
+  if (banner) {
     if (userData.banner) await utils.deleteImage(userData.banner)
-    banner = await utils.saveImage(body.banner, config.path.user)
+    newBanner = await utils.saveImage(banner, config.path.user)
   }
 
-  await dao.user.update(user.id, body.about, body.youtube, body.tiktok, body.instagram, body.isPrivate, image, banner)
+  await dao.user.update(user.id, about, youtube, tiktok, instagram, isPrivate === 'true', newImage, newBanner)
 
   return c.json({})
 })
@@ -132,22 +132,22 @@ account.put('/', async (c) => {
  * PUT /password
  * @description Edit password
  *
- * formData @param {string} password - Password
- * formData @param {string} newPassword - newPassword
+ * body @param {string} password - Password
+ * body @param {string} newPassword - newPassword
  */
 account.put('/password', async (c) => {
   const user = c.get('user')
-  const body: any = await c.req.parseBody()
+  const { password, newPassword } = await c.req.json()
 
   const current = await dao.user.getPassword(user.id)
 
-  const match = await bcrypt.compare(config.password.secret + body.password, current.password)
+  const match = await bcrypt.compare(config.password.secret + password, current.password)
   if (!match) throw new HTTPException(403, { message: 'Invalid password' })
 
-  const verify = utils.validator.password(body.newPassword)
+  const verify = utils.validator.password(newPassword)
   if (!verify) throw new HTTPException(400, { message: 'Invalid new password' })
 
-  const hash = await bcrypt.hash(config.password.secret + body.newPassword, config.password.salt)
+  const hash = await bcrypt.hash(config.password.secret + newPassword, config.password.salt)
   await dao.user.updatePassword(user.id, hash)
 
   return c.json({})
