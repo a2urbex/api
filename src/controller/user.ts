@@ -4,17 +4,18 @@ import { HTTPException } from 'hono/http-exception'
 import dao from 'dao'
 import utils from '@core/utils'
 import userService from 'service/user'
-import { authMiddleware } from 'service/auth'
+import { authMiddleware } from 'service/middleware'
 
 const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
-user.use('*', authMiddleware)
+
+user.use(authMiddleware)
 
 user.get('/', async (c) => {
   const users = await dao.user.getAll()
-  
+
   const formattedUsers = users.map((user: any) => ({
     ...userService.formatUser(user),
-    roles: JSON.parse(user.roles)
+    roles: JSON.parse(user.roles),
   }))
 
   return c.json(formattedUsers)
@@ -22,7 +23,7 @@ user.get('/', async (c) => {
 
 user.put('/:id/roles', async (c) => {
   const currentUser = c.get('user')
-  
+
   if (!utils.isAdmin(currentUser)) {
     throw new HTTPException(403, { message: 'Only administrators can update user roles' })
   }
@@ -41,7 +42,7 @@ user.put('/:id/roles', async (c) => {
 
 user.delete('/:id', async (c) => {
   const currentUser = c.get('user')
-  
+
   if (!utils.isAdmin(currentUser)) {
     throw new HTTPException(403, { message: 'Only administrators can delete users' })
   }
@@ -53,4 +54,4 @@ user.delete('/:id', async (c) => {
   return c.json({ message: 'User deleted successfully' })
 })
 
-export default user 
+export default user
