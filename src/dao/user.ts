@@ -6,7 +6,7 @@ const user = {
   },
 
   get: (id: number) => {
-    const sql = `SELECT id, email, username, about, youtube, tiktok, instagram, image, banner FROM user WHERE id = ?`
+    const sql = `SELECT id, email, username, about, youtube, tiktok, instagram, is_private, image, banner FROM user WHERE id = ?`
     return db.query(sql, [id], 0)
   },
 
@@ -57,6 +57,7 @@ const user = {
     youtube: string,
     tiktok: string,
     instagram: string,
+    isPrivate: boolean,
     image: string | null = null,
     banner: string | null = null
   ) => {
@@ -72,8 +73,8 @@ const user = {
       extraParams.push(banner)
     }
 
-    const sql = `UPDATE user SET about = ?, youtube = ?, tiktok = ?, instagram = ?${extraSql} WHERE id = ?`
-    return db.query(sql, [about, youtube, tiktok, instagram, ...extraParams, id])
+    const sql = `UPDATE user SET about = ?, youtube = ?, tiktok = ?, instagram = ?, is_private${extraSql} WHERE id = ?`
+    return db.query(sql, [about, youtube, tiktok, instagram, isPrivate, ...extraParams, id])
   },
 
   getPassword: (id: number) => {

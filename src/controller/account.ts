@@ -41,6 +41,7 @@ account.get('/:id{[0-9a-z]{24,}}', async (c) => {
     friendCount: friendCount.total,
     friendStatus: isFriend,
     images: images.map((v: any) => v.image),
+    isPrivate: userData.is_private,
   })
 })
 
@@ -99,6 +100,7 @@ account.get('/details', async (c) => {
  * formData @param {string} youtube - Youtube
  * formData @param {string} Tiktok - Tiktok
  * formData @param {string} instagram - Instagram
+ * formData @param {boolean} isPrivate - Is private
  * formData @param {File} image - Optional - Image
  * formData @param {File} banner - Optional - Banner
  */
@@ -121,7 +123,7 @@ account.put('/', async (c) => {
     banner = await utils.saveImage(body.banner, config.path.user)
   }
 
-  await dao.user.update(user.id, body.about, body.youtube, body.tiktok, body.instagram, image, banner)
+  await dao.user.update(user.id, body.about, body.youtube, body.tiktok, body.instagram, body.isPrivate, image, banner)
 
   return c.json({})
 })
