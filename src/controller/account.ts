@@ -118,7 +118,7 @@ account.put('/', async (c) => {
 
   if (body.banner) {
     if (userData.banner) await utils.deleteImage(userData.banner)
-    banner = await utils.saveImage(body.banne, config.path.user)
+    banner = await utils.saveImage(body.banner, config.path.user)
   }
 
   await dao.user.update(user.id, body.about, body.youtube, body.tiktok, body.instagram, image, banner)
