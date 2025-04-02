@@ -41,7 +41,7 @@ const locationMiddleware = createMiddleware(async (c, next) => {
   const id = parseInt(utils.decrypt(encryptedId, 'location'))
 
   const loc = await dao.location.getUser(id)
-  if (loc?.user_id !== user.id) throw new HTTPException(403, { message: 'User unauthorized' })
+  if (!utils.isAdmin(user) && loc?.user_id !== user.id) throw new HTTPException(403, { message: 'User unauthorized' })
 
   c.set('id', id)
   return next()
