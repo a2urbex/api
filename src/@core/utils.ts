@@ -82,6 +82,9 @@ const utils = {
     if (imgPath?.indexOf('/img/') !== 0) return
     let path = imgPath.charAt(0) === '/' ? imgPath.substring(1) : imgPath
 
+    const exist = await fs.exists(path)
+    if (!exist) return
+
     try {
       await fs.unlink(path)
     } catch (e) {
