@@ -51,7 +51,7 @@ const location = {
 
   get: (id: number, userId: number) => {
     const sql = `
-      SELECT l.id, l.user_id userId, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor, 
+      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor, 
         GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
       LEFT JOIN category c ON c.id = l.category_id
@@ -73,7 +73,7 @@ const location = {
     const [WHERE, params, LIMIT] = location.getFilters(filters)
 
     const sql = `
-      SELECT l.id, l.user_id userId, l.disabled, l.image, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
+      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
         GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
       LEFT JOIN category c ON c.id = l.category_id
