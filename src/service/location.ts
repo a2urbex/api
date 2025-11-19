@@ -27,6 +27,8 @@ const locationService = {
     item.id = utils.encrypt(item.id.toString(), 'location')
     item.fids = item.fids?.split(',').map((fid: number) => utils.encrypt(fid.toString(), 'favorite'))
     item.image = utils.getImageUrl(item.image)
+    item.image_maps = utils.getImageUrl(item.image_maps)
+
     if (!item.fids) item.fids = []
     if (item.userId) item.userId = utils.encrypt(item.userId.toString(), 'user')
 
