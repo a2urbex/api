@@ -43,6 +43,12 @@ const mailService = {
     const template = await mailService.getTemplate('resetPassword', { name, url })
     return mailService.send(to, subject, template)
   },
+
+  accessGranted: async (to: string, name: string, url: string) => {
+    const subject = 'Access granted - A2urbex'
+    const template = await mailService.getTemplate('accessGranted', { name, url })
+    return mailService.send(to, subject, template)
+  },
 }
 
 export default mailService
