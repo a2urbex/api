@@ -4,7 +4,7 @@ import { HTTPException } from 'hono/http-exception'
 import dao from 'dao'
 import utils from '@core/utils'
 import userService from 'service/user'
-import { authMiddleware } from 'service/auth'
+import { authMiddleware } from 'service/middleware'
 
 const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 user.use('*', authMiddleware)
