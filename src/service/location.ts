@@ -33,6 +33,15 @@ const locationService = {
     if (!item.fids) item.fids = []
     if (item.userId) item.userId = utils.encrypt(item.userId.toString(), 'user')
 
+    if (item.userRoles !== undefined) {
+      if (Array.isArray(item.userRoles)) {
+      } else if (typeof item.userRoles === 'string') {
+        try { item.userRoles = JSON.parse(item.userRoles) } catch { item.userRoles = [] }
+      } else {
+        item.userRoles = []
+      }
+    }
+
     return item
   },
 

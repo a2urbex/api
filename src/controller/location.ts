@@ -29,6 +29,17 @@ location.get('/:id{[0-9a-z]{24,}}', async (c) => {
 })
 
 /**
+ * GET /location/count
+ * @description Public endpoint returning the total number of locations
+ *
+ * @returns {{ total: number }}
+ */
+location.get('/count', async (c) => {
+  const row = await dao.location.getCount({})
+  return c.json({ total: row?.total ?? 0 })
+})
+
+/**
  * Auth middleware to verify if the user is logged in for all routes below
  */
 location.use(authMiddleware)
