@@ -3,7 +3,9 @@ import { HTTPException } from 'hono/http-exception'
 
 import dao from 'dao'
 import utils from '@core/utils'
+import config from 'config'
 import userService from 'service/user'
+import mailService from 'service/mail'
 import { authMiddleware } from 'service/middleware'
 
 const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -38,6 +40,31 @@ user.put('/:id/roles', async (c) => {
 
   await dao.user.updateRoles(userId, roles)
   return c.json({ message: 'User roles updated successfully' })
+})
+
+user.put('/:id/approve', async (c) => {
+  const currentUser = c.get('user')
+
+  if (!utils.isAdmin(currentUser)) {
+    throw new HTTPException(403, { message: 'Only administrators can approve users' })
+  }
+
+  const encryptedId = c.req.param('id')
+  const userId = parseInt(utils.decrypt(encryptedId, 'user'))
+  const { roles } = await c.req.json()
+
+  if (!Array.isArray(roles)) {
+    throw new HTTPException(400, { message: 'Roles must be an array' })
+  }
+
+  const target = await dao.user.get(userId)
+  if (!target) throw new HTTPException(404, { message: 'User not found' })
+
+  await dao.user.updateRoles(userId, roles)
+  await dao.user.updatePending(userId, 0)
+  await mailService.accessGranted(target.email, target.username, config.frontUrl)
+
+  return c.json({ message: 'User approved' })
 })
 
 user.put('/:id/pending', async (c) => {

@@ -6,7 +6,7 @@ const user = {
   },
 
   get: (id: number) => {
-    const sql = `SELECT id, email, username, about, youtube, tiktok, instagram, image, banner FROM user WHERE id = ?`
+    const sql = `SELECT id, email, username, about, youtube, tiktok, instagram, image, banner, roles FROM user WHERE id = ?`
     return db.query(sql, [id], 0)
   },
 

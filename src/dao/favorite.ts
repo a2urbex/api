@@ -12,6 +12,7 @@ const favorite = {
       LEFT JOIN favorite_location fl ON fl.favorite_id = f.id
       WHERE fu.user_id = ?
       GROUP BY f.id
+      ORDER BY f.id DESC
     `
     return db.query(sql, [userId])
   },
