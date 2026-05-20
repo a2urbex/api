@@ -16,7 +16,7 @@ const user = {
   },
 
   add: (email: string, password: string, username: string, roles: string[]) => {
-    const sql = `INSERT INTO user (email, password, username, roles, last_active_at) VALUES (?, ?, ?, ?, NOW())`
+    const sql = `INSERT INTO user (email, password, username, roles, pending, last_active_at) VALUES (?, ?, ?, ?, 1, NOW())`
     return db.query(sql, [email, password, username, JSON.stringify(roles)])
   },
 
@@ -37,13 +37,18 @@ const user = {
   },
 
   getAll: () => {
-    const sql = `SELECT id, image, username, email, roles FROM user`
+    const sql = `SELECT id, image, username, email, roles, pending FROM user`
     return db.query(sql)
   },
 
   updateRoles: (id: number, roles: string[]) => {
     const sql = `UPDATE user SET roles = ? WHERE id = ?`
     return db.query(sql, [JSON.stringify(roles), id])
+  },
+
+  updatePending: (id: number, pending: number) => {
+    const sql = `UPDATE user SET pending = ? WHERE id = ?`
+    return db.query(sql, [pending, id])
   },
 
   delete: (id: number) => {
