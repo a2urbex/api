@@ -41,7 +41,9 @@ account.get('/:id{[0-9a-z]{24,}}', async (c) => {
     friendCount: friendCount.total,
     friendStatus: isFriend,
     images: images.map((v: any) => v.image),
-    roles: JSON.parse(userData.roles || '[]'),
+    roles: Array.isArray(userData.roles)
+      ? userData.roles
+      : JSON.parse(userData.roles || '[]'),
   })
 })
 
