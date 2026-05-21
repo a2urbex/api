@@ -3,6 +3,7 @@ import country from './country'
 import dedup from './dedup'
 import favorite from './favorite'
 import friend from './friend'
+import importJob from './import'
 import location from './location'
 import user from './user'
 import source from './source'
@@ -14,6 +15,7 @@ export default {
   dedup,
   favorite,
   friend,
+  importJob,
   location,
   user,
   source,

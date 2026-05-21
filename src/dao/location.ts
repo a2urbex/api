@@ -117,6 +117,21 @@ const location = {
     return db.query(sql, [userId])
   },
 
+  findNearbyByName: (name: string, lat: number, lon: number, deltaDeg: number = 0.0005) => {
+    const sql = `SELECT id FROM location
+                 WHERE name = ?
+                   AND lat BETWEEN ? AND ?
+                   AND lon BETWEEN ? AND ?
+                   AND dedup_removed_at IS NULL
+                 LIMIT 1`
+    return db.query(sql, [name, lat - deltaDeg, lat + deltaDeg, lon - deltaDeg, lon + deltaDeg], 0)
+  },
+
+  updateCoreFields: (id: number, name: string, description: string, lat: number, lon: number, categoryId: number | null) => {
+    const sql = `UPDATE location SET name = ?, description = ?, lat = ?, lon = ?, category_id = ? WHERE id = ?`
+    return db.query(sql, [name, description, lat, lon, categoryId, id])
+  },
+
   add: (
     name: string,
     description: string,
