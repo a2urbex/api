@@ -4,8 +4,11 @@ import { HTTPException } from 'hono/http-exception'
 import { randomUUID } from 'node:crypto'
 
 import dao from 'dao'
+import utils from '@core/utils'
 import { authMiddleware, authQueryMiddleware, adminMiddleware } from 'service/middleware'
 import { DedupJob, registry } from 'service/dedup'
+import importService from 'service/import'
+import geocoderService from 'service/geocoder'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -129,6 +132,146 @@ admin.get('/dedup/:id/stream', authQueryMiddleware, adminMiddleware, (c) => {
 admin.get('/dedup', authMiddleware, adminMiddleware, async (c) => {
   const jobs = await dao.dedup.listJobs(20)
   return c.json({ list: jobs })
+})
+
+/**
+ * POST /admin/imports
+ * Upload a KML/KMZ file and create locations attributed to the chosen user.
+ *
+ * formData @param {File} file
+ * formData @param {string} assignee - Optional - target username (defaults to 'a2urbex')
+ * formData @param {string} categoryId - Optional - category to attach to imported locations
+ * formData @param {string} overwriteDuplicates - 'true' to update existing matches by name+coords
+ * formData @param {string} createFavoritesList - 'true' to create a favorite list named after the file
+ */
+admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
+  const uploader = c.get('user')
+  const body: any = await c.req.parseBody()
+
+  const file: File | undefined = body.file
+  if (!file || typeof file === 'string') throw new HTTPException(400, { message: 'Missing file' })
+
+  const filename = file.name
+  const lower = filename.toLowerCase()
+  if (!lower.endsWith('.kml') && !lower.endsWith('.kmz')) {
+    throw new HTTPException(400, { message: 'Only .kml and .kmz files are supported' })
+  }
+
+  const rawAssignee = body.assignee ? body.assignee.toString() : ''
+  const categoryId = body.categoryId ? parseInt(body.categoryId) : null
+  const overwriteDuplicates = body.overwriteDuplicates === 'true' || body.overwriteDuplicates === '1'
+  const createFavoritesList = body.createFavoritesList === 'true' || body.createFavoritesList === '1'
+
+  // 'a2urbex' (and empty) means platform-owned → no user_id on the locations.
+  const isPlatform = !rawAssignee || rawAssignee.toLowerCase() === 'a2urbex'
+  let assigneeId: number | null = null
+  if (!isPlatform) {
+    const u = await dao.user.getByUsername(rawAssignee)
+    if (!u) throw new HTTPException(400, { message: `Assignee user '${rawAssignee}' not found` })
+    assigneeId = u.id
+  }
+
+  const jobId = randomUUID()
+  await dao.importJob.create(
+    jobId,
+    filename,
+    file.size,
+    categoryId,
+    assigneeId,
+    uploader.id,
+    { overwriteDuplicates, createFavoritesList, platform: isPlatform }
+  )
+
+  let inserted = 0
+  let skipped = 0
+  let updated = 0
+  let favoriteId: number | null = null
+
+  try {
+    const placemarks = await importService.parse(filename, file)
+
+    if (createFavoritesList && placemarks.length) {
+      const favName = filename.replace(/\.(kml|kmz)$/i, '').slice(0, 80) || 'Imported'
+      const add = await dao.favorite.add(favName)
+      favoriteId = add.insertId
+      // Favorites need at least one owning user; for platform imports we
+      // attach the uploader so the list can be reached & shared from the admin UI.
+      await dao.favorite.addUser(favoriteId, assigneeId ?? uploader.id)
+    }
+
+    for (const p of placemarks) {
+      const existing = await dao.location.findNearbyByName(p.name, p.lat, p.lon)
+      if (existing) {
+        if (overwriteDuplicates) {
+          await dao.location.updateCoreFields(existing.id, p.name, p.description, p.lat, p.lon, categoryId)
+          updated++
+          if (favoriteId) {
+            const has = await dao.favorite.hasLocation(favoriteId, existing.id)
+            if (!has) await dao.favorite.addLocation(favoriteId, existing.id)
+          }
+        } else {
+          skipped++
+        }
+        continue
+      }
+
+      const country = await geocoderService.getCountry(p.lat, p.lon).catch(() => null)
+      const add = await dao.location.add(
+        p.name,
+        p.description,
+        null as any,
+        p.lat,
+        p.lon,
+        categoryId as any,
+        country?.id ?? null,
+        assigneeId
+      )
+      inserted++
+      if (favoriteId) await dao.favorite.addLocation(favoriteId, add.insertId)
+    }
+
+    await dao.importJob.finish(
+      jobId,
+      'finished',
+      placemarks.length,
+      inserted,
+      skipped,
+      updated,
+      favoriteId,
+      null
+    )
+
+    return c.json({
+      id: jobId,
+      total: placemarks.length,
+      inserted,
+      skipped,
+      updated,
+      favoriteId: favoriteId ? utils.encrypt(favoriteId.toString(), 'favorite') : null,
+    })
+  } catch (e: any) {
+    const msg = e?.message || String(e)
+    await dao.importJob.finish(jobId, 'error', 0, inserted, skipped, updated, favoriteId, msg)
+    throw new HTTPException(500, { message: `Import failed: ${msg}` })
+  }
+})
+
+/**
+ * GET /admin/imports
+ * History of past imports.
+ */
+admin.get('/imports', authMiddleware, adminMiddleware, async (c) => {
+  const jobs = await dao.importJob.list(30)
+  return c.json({ list: jobs })
+})
+
+/**
+ * DELETE /admin/imports/:id
+ * Delete a history entry (does not delete the imported locations).
+ */
+admin.delete('/imports/:id', authMiddleware, adminMiddleware, async (c) => {
+  await dao.importJob.delete(c.req.param('id'))
+  return c.json({ ok: true })
 })
 
 export default admin
