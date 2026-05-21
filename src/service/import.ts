@@ -8,6 +8,7 @@ export type ParsedPlacemark = {
   description: string
   lat: number
   lon: number
+  imageUrl: string | null
 }
 
 const decoder = new TextDecoder()
@@ -83,6 +84,28 @@ const tagContent = (block: string, tag: string): string | null => {
 
 const stripHtml = (s: string) => s.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim()
 
+// Pull the first usable image URL out of a Placemark block.
+// Looks at <img src="...">, <icon><href>...</href></icon>, and <gx:Image>.
+const extractImageUrl = (block: string): string | null => {
+  const img = block.match(/<img\b[^>]*\bsrc\s*=\s*["']([^"']+)["']/i)
+  if (img) return decodeEntities(img[1])
+
+  const iconHref = block.match(/<icon\b[^>]*>\s*<href>([\s\S]*?)<\/href>\s*<\/icon>/i)
+  if (iconHref) {
+    const href = decodeEntities(iconHref[1])
+    // Skip Google Earth pin sprites — they are not real photos.
+    if (!/^https?:\/\/maps\.(?:google|gstatic)\.com\//i.test(href)) return href
+  }
+
+  const gxImage = block.match(/<gx:Image\b[^>]*>([\s\S]*?)<\/gx:Image>/i)
+  if (gxImage) {
+    const href = tagContent(gxImage[1], 'gx:href') || tagContent(gxImage[1], 'href')
+    if (href) return href
+  }
+
+  return null
+}
+
 const parseKml = (xml: string): ParsedPlacemark[] => {
   const out: ParsedPlacemark[] = []
   const placemarkRe = /<Placemark\b[^>]*>([\s\S]*?)<\/Placemark>/gi
@@ -106,9 +129,12 @@ const parseKml = (xml: string): ParsedPlacemark[] => {
     if (lat < -90 || lat > 90 || lon < -180 || lon > 180) continue
 
     const name = (tagContent(block, 'name') || 'Imported point').slice(0, 255)
-    const description = stripHtml(tagContent(block, 'description') || '')
+    const rawDescription = tagContent(block, 'description') || ''
+    const description = stripHtml(rawDescription)
+    // Image hint can be inside the description HTML or in sibling icon/gx tags.
+    const imageUrl = extractImageUrl(rawDescription) || extractImageUrl(block)
 
-    out.push({ name, description, lat, lon })
+    out.push({ name, description, lat, lon, imageUrl })
   }
   return out
 }
