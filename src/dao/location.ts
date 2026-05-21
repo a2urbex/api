@@ -59,7 +59,7 @@ const location = {
       LEFT JOIN user u ON u.id = l.user_id
       LEFT JOIN favorite_location fl ON fl.location_id = l.id
       LEFT JOIN favorite_user fu ON fu.favorite_id = fl.favorite_id
-      WHERE l.id = ?
+      WHERE l.id = ? AND l.dedup_removed_at IS NULL
       GROUP BY l.id
     `
 
@@ -83,7 +83,7 @@ const location = {
       LEFT JOIN user u ON u.id = l.user_id
       LEFT JOIN favorite_location fl ON fl.location_id = l.id
       LEFT JOIN favorite_user fu ON fu.favorite_id = fl.favorite_id
-      WHERE 1 ${WHERE} AND l.lat IS NOT NULL AND l.lon IS NOT NULL
+      WHERE 1 ${WHERE} AND l.lat IS NOT NULL AND l.lon IS NOT NULL AND l.dedup_removed_at IS NULL
       GROUP BY l.id
       ORDER BY id DESC
       ${LIMIT}
@@ -95,7 +95,7 @@ const location = {
   getCount: (filters: SearchFilters) => {
     const [WHERE, params] = location.getFilters(filters)
 
-    const sql = `SELECT COUNT(id) total FROM location l LEFT JOIN favorite_location fl ON fl.location_id = l.id WHERE 1 ${WHERE}`
+    const sql = `SELECT COUNT(id) total FROM location l LEFT JOIN favorite_location fl ON fl.location_id = l.id WHERE 1 ${WHERE} AND l.dedup_removed_at IS NULL`
 
     return db.query(sql, params, 0)
   },
