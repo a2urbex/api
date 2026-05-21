@@ -5,6 +5,7 @@ import { randomUUID } from 'node:crypto'
 
 import dao from 'dao'
 import utils from '@core/utils'
+import config from 'config'
 import { authMiddleware, authQueryMiddleware, adminMiddleware } from 'service/middleware'
 import { DedupJob, registry } from 'service/dedup'
 import importService from 'service/import'
@@ -203,7 +204,8 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
       const existing = await dao.location.findNearbyByName(p.name, p.lat, p.lon)
       if (existing) {
         if (overwriteDuplicates) {
-          await dao.location.updateCoreFields(existing.id, p.name, p.description, p.lat, p.lon, categoryId)
+          const localImage = p.imageUrl ? await utils.downloadImage(p.imageUrl, config.path.location) : null
+          await dao.location.updateCoreFields(existing.id, p.name, p.description, p.lat, p.lon, categoryId, localImage)
           updated++
           if (favoriteId) {
             const has = await dao.favorite.hasLocation(favoriteId, existing.id)
@@ -216,10 +218,11 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
       }
 
       const country = await geocoderService.getCountry(p.lat, p.lon).catch(() => null)
+      const localImage = p.imageUrl ? await utils.downloadImage(p.imageUrl, config.path.location) : null
       const add = await dao.location.add(
         p.name,
         p.description,
-        null as any,
+        localImage as any,
         p.lat,
         p.lon,
         categoryId as any,

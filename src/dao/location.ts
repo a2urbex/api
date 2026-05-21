@@ -127,9 +127,23 @@ const location = {
     return db.query(sql, [name, lat - deltaDeg, lat + deltaDeg, lon - deltaDeg, lon + deltaDeg], 0)
   },
 
-  updateCoreFields: (id: number, name: string, description: string, lat: number, lon: number, categoryId: number | null) => {
-    const sql = `UPDATE location SET name = ?, description = ?, lat = ?, lon = ?, category_id = ? WHERE id = ?`
-    return db.query(sql, [name, description, lat, lon, categoryId, id])
+  updateCoreFields: (
+    id: number,
+    name: string,
+    description: string,
+    lat: number,
+    lon: number,
+    categoryId: number | null,
+    image: string | null = null
+  ) => {
+    let extraSql = ''
+    const extraParams: any[] = []
+    if (image) {
+      extraSql = ', image = ?'
+      extraParams.push(image)
+    }
+    const sql = `UPDATE location SET name = ?, description = ?, lat = ?, lon = ?, category_id = ?${extraSql} WHERE id = ?`
+    return db.query(sql, [name, description, lat, lon, categoryId, ...extraParams, id])
   },
 
   add: (

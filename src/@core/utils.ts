@@ -78,6 +78,34 @@ const utils = {
     return '/' + imgPath
   },
 
+  // Downloads a remote image to the given path and returns a stored relative path
+  // (e.g. "/img/locations/abc123.jpeg"), or null if the URL is unreachable or
+  // points at an unsupported format. Never throws — failures are non-fatal.
+  downloadImage: async (url: string, path: string): Promise<string | null> => {
+    try {
+      if (!/^https?:\/\//i.test(url)) return null
+      const res = await fetch(url, { redirect: 'follow' })
+      if (!res.ok) return null
+
+      const contentType = (res.headers.get('content-type') || '').split(';')[0].trim().toLowerCase()
+      let ext = utils.getImageExtension(contentType)
+      if (!ext) {
+        const m = url.split('?')[0].match(/\.(png|jpe?g)$/i)
+        if (m) ext = m[1].toLowerCase() === 'jpg' ? 'jpg' : (m[1].toLowerCase() as any)
+      }
+      if (!ext) return null
+
+      const buf = new Uint8Array(await res.arrayBuffer())
+      if (!buf.byteLength) return null
+
+      const imgPath = `${path}/${utils.generateRandomString(16)}.${ext}`
+      await fs.writeFile(imgPath, buf)
+      return '/' + imgPath
+    } catch (_) {
+      return null
+    }
+  },
+
   deleteImage: async (imgPath: string) => {
     if (imgPath?.indexOf('/img/') !== 0) return
     let path = imgPath.charAt(0) === '/' ? imgPath.substring(1) : imgPath
