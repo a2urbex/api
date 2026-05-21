@@ -60,4 +60,36 @@ const favoriteMiddleware = createMiddleware(async (c, next) => {
   return next()
 })
 
-export { authMiddleware, getUser, locationMiddleware, favoriteMiddleware }
+// ADMIN
+const adminMiddleware = createMiddleware(async (c, next) => {
+  const user = c.get('user')
+  if (!user || !utils.isAdmin(user)) throw new HTTPException(403, { message: 'Admin only' })
+  return next()
+})
+
+// Like authMiddleware but also accepts ?token=... — required because
+// EventSource cannot set custom headers.
+const authQueryMiddleware = createMiddleware(async (c, next) => {
+  const headerToken = c.req.header('authorization')?.split(' ')?.[1]
+  const queryToken = c.req.query('token')
+  const token = headerToken || queryToken
+
+  if (!token) throw new HTTPException(401, { message: 'Invalid headers' })
+
+  try {
+    const data: any = jwt.verify(token, config.jwtSecret, { clockTolerance: 10 })
+    c.set('user', { id: data.id, email: data.email, roles: data.roles })
+  } catch (e) {
+    throw new HTTPException(401, { message: 'Invalid token' })
+  }
+  return next()
+})
+
+export {
+  authMiddleware,
+  authQueryMiddleware,
+  adminMiddleware,
+  getUser,
+  locationMiddleware,
+  favoriteMiddleware,
+}

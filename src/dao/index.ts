@@ -1,5 +1,6 @@
 import category from './category'
 import country from './country'
+import dedup from './dedup'
 import favorite from './favorite'
 import friend from './friend'
 import location from './location'
@@ -10,6 +11,7 @@ import token from './token'
 export default {
   category,
   country,
+  dedup,
   favorite,
   friend,
   location,
