@@ -1,6 +1,6 @@
 import config from 'config'
 import Db from '@core/Db'
-import daoList from 'dao/index'
+import daoList from 'dao'
 
 import geocoderService from 'service/geocoder'
 
