@@ -3,7 +3,14 @@
     "strict": true,
     "jsx": "react-jsx",
     "jsxImportSource": "hono/jsx",
-    "baseUrl": "src",
-    "noImplicitAny": false
+    "paths": {
+      "@core/*": ["./src/@core/*"],
+      "dao": ["./src/dao"],
+      "config": ["./src/config"],
+      "service/*": ["./src/service/*"],
+      "controller/*": ["./src/controller/*"]
+    },
+    "noImplicitAny": false,
+    "types": ["bun-types"]
   }
 }

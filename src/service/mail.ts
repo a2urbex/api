@@ -30,7 +30,7 @@ const mailService = {
 
   getTemplate: async (filename: string, variables: Object = {}) => {
     const file = await fs.readFile(`${config.path.mail}/${filename}.html`)
-    let raw = Buffer.from(file).toString()
+    let raw = file.toString()
 
     for (const name in variables) raw = raw.replaceAll(`##${name}##`, variables[name])
     raw = raw.replaceAll('\n', '')

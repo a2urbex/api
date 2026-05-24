@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import { HTTPException } from 'hono/http-exception'
-import { randomUUID } from 'node:crypto'
+import { randomUUID } from 'crypto'
 
 import dao from 'dao'
 import utils from '@core/utils'
@@ -23,7 +23,11 @@ const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 admin.post('/dedup/start', authMiddleware, adminMiddleware, async (c) => {
   const user = c.get('user')
   let body: any = {}
-  try { body = await c.req.json() } catch (_) { /* empty body allowed */ }
+  try {
+    body = await c.req.json()
+  } catch (_) {
+    /* empty body allowed */
+  }
   const radiusM = Math.max(1, Math.min(1000, parseInt(body.radius) || 25))
 
   const total = await dao.dedup.countActivePoints()
@@ -55,14 +59,7 @@ admin.post('/dedup/start', authMiddleware, adminMiddleware, async (c) => {
     } catch (e) {
       console.error('Dedup job failed', e)
     } finally {
-      await dao.dedup.updateJob(
-        id,
-        job.state,
-        job.processed,
-        job.duplicates,
-        job.kept,
-        job.error ?? null
-      )
+      await dao.dedup.updateJob(id, job.state, job.processed, job.duplicates, job.kept, job.error ?? null)
     }
   })()
 
@@ -100,8 +97,8 @@ admin.get('/dedup/:id/stream', authQueryMiddleware, adminMiddleware, (c) => {
   if (!job) throw new HTTPException(404, { message: 'Job not found' })
 
   return streamSSE(c, async (stream) => {
-    let unsub: (() => void) | null = null
-    let resolveDone: (() => void) | null = null
+    let unsub: () => void = () => {}
+    let resolveDone: () => void = () => {}
 
     stream.onAbort(() => {
       unsub?.()
@@ -173,15 +170,11 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
   }
 
   const jobId = randomUUID()
-  await dao.importJob.create(
-    jobId,
-    filename,
-    file.size,
-    categoryId,
-    assigneeId,
-    uploader.id,
-    { overwriteDuplicates, createFavoritesList, platform: isPlatform }
-  )
+  await dao.importJob.create(jobId, filename, file.size, categoryId, assigneeId, uploader.id, {
+    overwriteDuplicates,
+    createFavoritesList,
+    platform: isPlatform,
+  })
 
   let inserted = 0
   let skipped = 0
@@ -197,7 +190,7 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
       favoriteId = add.insertId
       // Favorites need at least one owning user; for platform imports we
       // attach the uploader so the list can be reached & shared from the admin UI.
-      await dao.favorite.addUser(favoriteId, assigneeId ?? uploader.id)
+      await dao.favorite.addUser(favoriteId!, assigneeId ?? uploader.id)
     }
 
     for (const p of placemarks) {
@@ -227,22 +220,13 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
         p.lon,
         categoryId as any,
         country?.id ?? null,
-        assigneeId
+        assigneeId,
       )
       inserted++
       if (favoriteId) await dao.favorite.addLocation(favoriteId, add.insertId)
     }
 
-    await dao.importJob.finish(
-      jobId,
-      'finished',
-      placemarks.length,
-      inserted,
-      skipped,
-      updated,
-      favoriteId,
-      null
-    )
+    await dao.importJob.finish(jobId, 'finished', placemarks.length, inserted, skipped, updated, favoriteId, null)
 
     return c.json({
       id: jobId,

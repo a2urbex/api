@@ -110,7 +110,7 @@ export class DedupJob {
     public readonly id: string,
     private readonly source: AsyncIterable<Point[]>,
     public readonly total: number,
-    public readonly radiusM = 25
+    public readonly radiusM = 25,
   ) {
     this.grid = new SpatialGrid(radiusM)
   }
@@ -145,10 +145,12 @@ export class DedupJob {
     for (const fn of this.listeners) fn(s)
   }
 
-  async run(opts: {
-    chunkSize?: number
-    onRemoved?: (id: number) => void | Promise<void>
-  } = {}): Promise<void> {
+  async run(
+    opts: {
+      chunkSize?: number
+      onRemoved?: (id: number) => void | Promise<void>
+    } = {},
+  ): Promise<void> {
     const { chunkSize = 5_000, onRemoved } = opts
     this.startedAt = Date.now()
     this.emit()
@@ -195,9 +197,15 @@ export class DedupJob {
 
 class JobRegistry {
   private jobs = new Map<string, DedupJob>()
-  add(job: DedupJob) { this.jobs.set(job.id, job) }
-  get(id: string) { return this.jobs.get(id) }
-  remove(id: string) { this.jobs.delete(id) }
+  add(job: DedupJob) {
+    this.jobs.set(job.id, job)
+  }
+  get(id: string) {
+    return this.jobs.get(id)
+  }
+  remove(id: string) {
+    this.jobs.delete(id)
+  }
 }
 
 export const registry = new JobRegistry()
