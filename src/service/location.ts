@@ -13,6 +13,7 @@ const locationService = {
           const friends = await dao.friend.getUserFriends(user.id)
           filters.users = [user.id, ...friends]
           delete filters.sources
+          delete filters.excludedSources
         }
       }
     }

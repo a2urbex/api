@@ -37,6 +37,11 @@ const location = {
       params.push(filters.sources)
     }
 
+    if (filters.excludedSources?.length) {
+      WHERE += ' AND (l.source IS NULL OR l.source NOT IN (?))'
+      params.push(filters.excludedSources)
+    }
+
     if (filters.favoriteId) {
       WHERE += ' AND fl.favorite_id = ?'
       params.push(filters.favoriteId)

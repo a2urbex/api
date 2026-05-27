@@ -25,6 +25,7 @@ interface SearchFilters {
   categories?: number[]
   countries?: number[]
   sources?: number[]
+  excludedSources?: string[]
   users?: number[]
   page?: number
   favoriteId?: number
