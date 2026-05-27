@@ -139,15 +139,21 @@ const location = {
     lat: number,
     lon: number,
     categoryId: number | null,
-    image: string | null = null
+    image: string | null = null,
+    source: string | null = null
   ) => {
-    let extraSql = ''
+    const extraSql: string[] = []
     const extraParams: any[] = []
     if (image) {
-      extraSql = ', image = ?'
+      extraSql.push('image = ?')
       extraParams.push(image)
     }
-    const sql = `UPDATE location SET name = ?, description = ?, lat = ?, lon = ?, category_id = ?${extraSql} WHERE id = ?`
+    if (source !== null) {
+      extraSql.push('source = ?')
+      extraParams.push(source)
+    }
+    const extra = extraSql.length ? ', ' + extraSql.join(', ') : ''
+    const sql = `UPDATE location SET name = ?, description = ?, lat = ?, lon = ?, category_id = ?${extra} WHERE id = ?`
     return db.query(sql, [name, description, lat, lon, categoryId, ...extraParams, id])
   },
 
@@ -159,10 +165,12 @@ const location = {
     lon: number,
     categoryId: number,
     countryId: number,
-    userId: number | null = null
+    userId: number | null = null,
+    source: string | null = null
   ) => {
-    const sql = `INSERT INTO location (name, description, image, lat, lon, category_id, country_id, user_id, date_add) VALUES(?, ?, ?, ?, ?, ?, ?, ?, NOW())`
-    return db.query(sql, [name, description, image, lat, lon, categoryId, countryId, userId])
+    const sql = `INSERT INTO location (name, description, image, lat, lon, category_id, country_id, user_id, source, date_add)
+                 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`
+    return db.query(sql, [name, description, image, lat, lon, categoryId, countryId, userId, source])
   },
 
   update: (

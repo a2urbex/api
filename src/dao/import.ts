@@ -12,11 +12,12 @@ const importDao = {
     categoryId: number | null,
     assigneeId: number | null,
     uploaderId: number | null,
-    options: any
+    options: any,
+    sourceId: number | null = null
   ) => {
-    const sql = `INSERT INTO import_job (id, filename, size, category_id, assignee_id, uploader_id, options)
-                 VALUES (?, ?, ?, ?, ?, ?, ?)`
-    return db.query(sql, [id, filename, size, categoryId, assigneeId, uploaderId, JSON.stringify(options || {})])
+    const sql = `INSERT INTO import_job (id, filename, size, category_id, assignee_id, source_id, uploader_id, options)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    return db.query(sql, [id, filename, size, categoryId, assigneeId, sourceId, uploaderId, JSON.stringify(options || {})])
   },
 
   finish: (
@@ -41,10 +42,12 @@ const importDao = {
       SELECT j.id, j.filename, j.size, j.state, j.total, j.inserted, j.skipped, j.updated,
              j.error, j.started_at, j.finished_at, j.options,
              COALESCE(u.username, 'a2urbex') assignee_username,
-             up.username uploader_username
+             up.username uploader_username,
+             s.name source_name
       FROM import_job j
       LEFT JOIN user u ON u.id = j.assignee_id
       LEFT JOIN user up ON up.id = j.uploader_id
+      LEFT JOIN source s ON s.id = j.source_id
       ORDER BY j.started_at DESC
       LIMIT ?
     `
