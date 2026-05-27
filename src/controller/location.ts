@@ -86,9 +86,9 @@ location.get('/filter', async (c) => {
 location.post('/p/:page{[0-9]+}', async (c) => {
   const user = c.get('user')
   const page = parseInt(c.req.param('page'))
-  const { string, categories, countries, sources } = await c.req.json()
+  const { string, categories, countries, sources, excludedSources } = await c.req.json()
 
-  const data = await locationService.getLocations(user, { string, categories, countries, sources, page })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources, excludedSources, page })
   return c.json(data)
 })
 
@@ -105,9 +105,9 @@ location.post('/p/:page{[0-9]+}', async (c) => {
  */
 location.post('/map', async (c) => {
   const user = c.get('user')
-  const { string, categories, countries, sources } = await c.req.json()
+  const { string, categories, countries, sources, excludedSources } = await c.req.json()
 
-  const data = await locationService.getLocations(user, { string, categories, countries, sources })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources, excludedSources })
   return c.json(data)
 })
 
