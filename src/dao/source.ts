@@ -10,15 +10,18 @@ const source = {
     return db.query(sql)
   },
 
-  getListWithCounts: () => {
-    const sql = `
-      SELECT s.id, s.name, COUNT(l.id) AS location_count
-      FROM source s
-      LEFT JOIN location l ON l.source = s.name AND l.dedup_removed_at IS NULL
-      GROUP BY s.id, s.name
-      ORDER BY s.name ASC
-    `
-    return db.query(sql)
+  getListWithCounts: async () => {
+    const sources: any[] = await db.query(`SELECT id, name FROM source ORDER BY name ASC`)
+    if (!sources.length) return []
+    const counts: any[] = await db.query(
+      `SELECT source AS name, COUNT(*) AS c
+       FROM location
+       WHERE source IS NOT NULL AND dedup_removed_at IS NULL
+       GROUP BY source`
+    )
+    const byName: Record<string, number> = {}
+    for (const row of counts) byName[row.name] = Number(row.c)
+    return sources.map((s) => ({ ...s, location_count: byName[s.name] || 0 }))
   },
 
   getById: (id: number) => {
