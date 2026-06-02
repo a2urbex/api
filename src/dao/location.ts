@@ -199,10 +199,10 @@ const location = {
     lat: number | null,
     lon: number | null,
     name: string | null,
-    description: string,
-    imageDirect: string,
+    description: string | null,
+    imageDirect: string | null,
   ) => {
-    const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, imageDirect) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     return db.query(sql, [pid, source, url, lat, lon, name, description, imageDirect])
   },
 

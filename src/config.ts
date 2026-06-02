@@ -41,4 +41,13 @@ export default {
     user: process.env.MAIL_USER,
     password: process.env.MAIL_PASSWORD,
   },
+
+  pinterest: {
+    url: process.env.PINTEREST_URL as string,
+    boardId: process.env.PINTEREST_BOARD_ID as string,
+    boardUrl: process.env.PINTEREST_BOARD_URL as string,
+    fetchBaseUrl: process.env.PINTEREST_FETCH_BASE_URL as string,
+    email: process.env.PINTEREST_EMAIL as string,
+    password: process.env.PINTEREST_PASSWORD as string,
+  },
 }
