@@ -7,6 +7,7 @@
     "bcrypt": "^5.1.1",
     "bun": "^1.1.22",
     "country-reverse-geocoding": "^0.2.2",
+    "croner": "^10.0.1",
     "hono": "^4.2.9",
     "i18n-iso-countries": "^7.14.0",
     "jsonwebtoken": "^9.0.2",
