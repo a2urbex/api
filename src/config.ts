@@ -34,8 +34,6 @@ export default {
     mail: process.env.MAIL_HTML_PATH as string,
   },
 
-  googleApiKey: process.env.GOOGLE_API_KEY,
-
   mail: {
     service: process.env.MAIL_SERVICE,
     host: process.env.MAIL_HOST,

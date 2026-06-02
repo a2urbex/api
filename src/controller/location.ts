@@ -139,12 +139,10 @@ location.post('/', async (c) => {
   const user = c.get('user')
   const body: any = await c.req.parseBody()
 
-  const country = await geocoderService.getCountry(body.lat, body.lon)
-
   let image: any = null
   if (body.image) image = await utils.saveImage(body.image, config.path.location)
 
-  await dao.location.add(body.name, body.description, image, body.lat, body.lon, body.categoryId, country?.id, user.id)
+  await dao.location.add(body.name, body.description, image, body.lat, body.lon, body.categoryId, user.id)
 
   return c.json({})
 })

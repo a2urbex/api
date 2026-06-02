@@ -1,17 +1,15 @@
 import NodeGeocoder from 'node-geocoder'
-
-import config from 'config'
 import dao from 'dao'
 
 let geocoder: any = null
 
 const geocoderService = {
   init: () => {
-    geocoder = NodeGeocoder({ apiKey: config.googleApiKey })
+    geocoder = NodeGeocoder({ provider: 'openstreetmap' })
   },
 
   getCountry: async (lat: number, lon: number) => {
-    if (!lat || !lon || lat < -90 || lat > 90 || lon < -90 || lon > 90) return
+    if (lat == null || lon == null || lat < -90 || lat > 90 || lon < -180 || lon > 180) return
 
     const res = await geocoder.reverse({ lat, lon })
     if (!res.length || !res[0].countryCode) return

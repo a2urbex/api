@@ -216,7 +216,6 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
         continue
       }
 
-      const country = await geocoderService.getCountry(p.lat, p.lon).catch(() => null)
       const localImage = p.imageUrl ? await utils.downloadImage(p.imageUrl, config.path.location) : null
       const add = await dao.location.add(
         p.name,
@@ -225,7 +224,6 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
         p.lat,
         p.lon,
         categoryId as any,
-        country?.id ?? null,
         assigneeId,
         sourceName,
       )

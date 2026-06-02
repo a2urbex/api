@@ -140,7 +140,7 @@ const location = {
     lon: number,
     categoryId: number | null,
     image: string | null = null,
-    source: string | null = null
+    source: string | null = null,
   ) => {
     const extraSql: string[] = []
     const extraParams: any[] = []
@@ -166,7 +166,7 @@ const location = {
     categoryId: number,
     countryId: number,
     userId: number | null = null,
-    source: string | null = null
+    source: string | null = null,
   ) => {
     const sql = `INSERT INTO location (name, description, image, lat, lon, category_id, country_id, user_id, source, date_add)
                  VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`
@@ -181,7 +181,7 @@ const location = {
     lat: number,
     lon: number,
     categoryId: number,
-    countryId: number
+    countryId: number,
   ) => {
     const sql = `UPDATE location SET name = ?, description = ?, image = ?, lat = ?, lon = ?, category_id = ?, country_id = ? WHERE id = ?`
     return db.query(sql, [name, description, image, lat, lon, categoryId, countryId, id])
@@ -190,6 +190,25 @@ const location = {
   delete: (id: number) => {
     const sql = `DELETE FROM location WHERE id = ?`
     return db.query(sql, [id])
+  },
+
+  addPinterest: (
+    pid: number,
+    source: string,
+    url: string,
+    lat: number | null,
+    lon: number | null,
+    name: string | null,
+    description: string,
+    imageDirect: string,
+  ) => {
+    const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, imageDirect) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+    return db.query(sql, [pid, source, url, lat, lon, name, description, imageDirect])
+  },
+
+  getByPid: (pid: number, source: string) => {
+    const sql = `SELECT id FROM location WHERE pid = ? AND source = ?`
+    return db.query(sql, [pid, source], 0)
   },
 }
 
