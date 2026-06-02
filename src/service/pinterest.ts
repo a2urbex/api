@@ -6,6 +6,7 @@ import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
 import geocoderService from './geocoder'
+import categoryService from './category'
 
 const SOURCE = 'Pinterest'
 
@@ -332,6 +333,7 @@ const pinterestService = {
       let lat: number | null = null
       let lon: number | null = null
       let name: string | null = null
+      let description: string | null = null
 
       if (formatB) {
         // Starts with coordinates
@@ -347,9 +349,11 @@ const pinterestService = {
         // No coordinates found at all
         name = item.title ?? null
       }
+      name = item.title?.substring(0, 250) ?? name ?? null
+      description = item.description?.substring(0, 250) ?? null
 
       const country = lat && lon ? await geocoderService.getCountry(lat, lon) : null
-      const category: any = null
+      const category: any = name ? categoryService.getCategory(name) : null
 
       await dao.location.addPinterest(
         item.id,
@@ -357,8 +361,8 @@ const pinterestService = {
         `${config.pinterest.url}/pin/${item.id}`,
         lat,
         lon,
-        item.title?.substring(0, 250) ?? name ?? null,
-        item.description?.substring(0, 250) ?? null,
+        name,
+        description,
         `/${path.join(config.path.location, imgName)}`,
         country?.id ?? null,
         category?.id ?? null,
@@ -370,8 +374,8 @@ const pinterestService = {
         `${config.pinterest.url}/pin/${item.id}`,
         lat,
         lon,
-        item.title?.substring(0, 250) ?? name ?? null,
-        item.description?.substring(0, 250) ?? null,
+        name,
+        description,
         `/${path.join(config.path.location, imgName)}`,
         country?.id ?? null,
         category?.id ?? null,
