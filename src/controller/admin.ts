@@ -157,14 +157,8 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
 
   const rawAssignee = body.assignee ? body.assignee.toString() : ''
   const categoryId = body.categoryId ? parseInt(body.categoryId) : null
-  const sourceId = body.sourceId ? parseInt(body.sourceId.toString()) : null
   const overwriteDuplicates = body.overwriteDuplicates === 'true' || body.overwriteDuplicates === '1'
   const createFavoritesList = body.createFavoritesList === 'true' || body.createFavoritesList === '1'
-
-  if (!sourceId) throw new HTTPException(400, { message: 'sourceId is required' })
-  const sourceRow = await dao.source.getById(sourceId)
-  if (!sourceRow) throw new HTTPException(400, { message: 'sourceId not found' })
-  const sourceName: string = sourceRow.name
 
   // 'a2urbex' (and empty) means platform-owned → no user_id on the locations.
   const isPlatform = !rawAssignee || rawAssignee.toLowerCase() === 'a2urbex'
@@ -180,7 +174,7 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
     overwriteDuplicates,
     createFavoritesList,
     platform: isPlatform,
-  }, sourceId)
+  })
 
   let inserted = 0
   let skipped = 0
@@ -204,7 +198,7 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
       if (existing) {
         if (overwriteDuplicates) {
           const localImage = p.imageUrl ? await utils.downloadImage(p.imageUrl, config.path.location) : null
-          await dao.location.updateCoreFields(existing.id, p.name, p.description, p.lat, p.lon, categoryId, localImage, sourceName)
+          await dao.location.updateCoreFields(existing.id, p.name, p.description, p.lat, p.lon, categoryId, localImage)
           updated++
           if (favoriteId) {
             const has = await dao.favorite.hasLocation(favoriteId, existing.id)
@@ -216,6 +210,7 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
         continue
       }
 
+      const country = await geocoderService.getCountry(p.lat, p.lon).catch(() => null)
       const localImage = p.imageUrl ? await utils.downloadImage(p.imageUrl, config.path.location) : null
       const add = await dao.location.add(
         p.name,
@@ -224,8 +219,8 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
         p.lat,
         p.lon,
         categoryId as any,
+        country?.id ?? null,
         assigneeId,
-        sourceName,
       )
       inserted++
       if (favoriteId) await dao.favorite.addLocation(favoriteId, add.insertId)
@@ -264,96 +259,6 @@ admin.get('/imports', authMiddleware, adminMiddleware, async (c) => {
 admin.delete('/imports/:id', authMiddleware, adminMiddleware, async (c) => {
   await dao.importJob.delete(c.req.param('id'))
   return c.json({ ok: true })
-})
-
-/**
- * GET /admin/sources
- * List all sources with their attached location counts.
- */
-admin.get('/sources', authMiddleware, adminMiddleware, async (c) => {
-  const list = await dao.source.getListWithCounts()
-  return c.json({ list })
-})
-
-/**
- * POST /admin/sources
- * body @param {string} name - Required, must be unique (case-insensitive).
- */
-admin.post('/sources', authMiddleware, adminMiddleware, async (c) => {
-  const body: any = await c.req.json()
-  const name = (body.name || '').toString().trim()
-  if (!name) throw new HTTPException(400, { message: 'Name required' })
-  const existing = await dao.source.getByName(name)
-  if (existing) throw new HTTPException(409, { message: 'A source with this name already exists' })
-  const res: any = await dao.source.create(name)
-  return c.json({ id: res.insertId, name })
-})
-
-/**
- * PATCH /admin/sources/:id
- * body @param {string} name - The new name. Renames the source and updates location.source.
- */
-admin.patch('/sources/:id', authMiddleware, adminMiddleware, async (c) => {
-  const id = parseInt(c.req.param('id'))
-  const body: any = await c.req.json()
-  const newName = (body.name || '').toString().trim()
-  if (!newName) throw new HTTPException(400, { message: 'Name required' })
-
-  const current = await dao.source.getById(id)
-  if (!current) throw new HTTPException(404, { message: 'Source not found' })
-
-  if (current.name.toLowerCase() !== newName.toLowerCase()) {
-    const collision = await dao.source.getByName(newName)
-    if (collision) throw new HTTPException(409, { message: 'A source with this name already exists' })
-  }
-
-  await dao.source.rename(id, newName)
-  await dao.source.renameLocations(current.name, newName)
-  return c.json({ id, name: newName })
-})
-
-/**
- * DELETE /admin/sources/:id
- * Refuses with 409 when locations still reference the source.
- */
-admin.delete('/sources/:id', authMiddleware, adminMiddleware, async (c) => {
-  const id = parseInt(c.req.param('id'))
-  const current = await dao.source.getById(id)
-  if (!current) throw new HTTPException(404, { message: 'Source not found' })
-
-  const count: any = await dao.source.countLocations(current.name)
-  if (count && count.c > 0) {
-    throw new HTTPException(409, { message: `Source still has ${count.c} location(s). Merge them first.` })
-  }
-  await dao.source.delete(id)
-  return c.json({ ok: true })
-})
-
-/**
- * POST /admin/sources/merge
- * body @param {number} targetId       - Required, the source to keep.
- * body @param {number[]} sourceIds    - Required, IDs to merge into the target (≥1, must not include target).
- *
- * Moves all locations from the listed sources to the target source name, then deletes the merged-from sources.
- */
-admin.post('/sources/merge', authMiddleware, adminMiddleware, async (c) => {
-  const body: any = await c.req.json()
-  const targetId = parseInt(body.targetId)
-  const sourceIds: number[] = Array.isArray(body.sourceIds) ? body.sourceIds.map((v: any) => parseInt(v)) : []
-  if (!targetId || !sourceIds.length) throw new HTTPException(400, { message: 'targetId and sourceIds required' })
-  if (sourceIds.includes(targetId)) throw new HTTPException(400, { message: 'sourceIds must not include targetId' })
-
-  const target = await dao.source.getById(targetId)
-  if (!target) throw new HTTPException(404, { message: 'Target source not found' })
-
-  for (const sid of sourceIds) {
-    const s = await dao.source.getById(sid)
-    if (!s) continue
-    await dao.source.renameLocations(s.name, target.name)
-    await dao.source.delete(sid)
-  }
-
-  return c.json({ ok: true, targetId, mergedIds: sourceIds })
 })
 
 export default admin

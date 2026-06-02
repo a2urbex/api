@@ -86,9 +86,9 @@ location.get('/filter', async (c) => {
 location.post('/p/:page{[0-9]+}', async (c) => {
   const user = c.get('user')
   const page = parseInt(c.req.param('page'))
-  const { string, categories, countries, sources, excludedSources } = await c.req.json()
+  const { string, categories, countries, sources } = await c.req.json()
 
-  const data = await locationService.getLocations(user, { string, categories, countries, sources, excludedSources, page })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources, page })
   return c.json(data)
 })
 
@@ -105,9 +105,9 @@ location.post('/p/:page{[0-9]+}', async (c) => {
  */
 location.post('/map', async (c) => {
   const user = c.get('user')
-  const { string, categories, countries, sources, excludedSources } = await c.req.json()
+  const { string, categories, countries, sources } = await c.req.json()
 
-  const data = await locationService.getLocations(user, { string, categories, countries, sources, excludedSources })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources })
   return c.json(data)
 })
 
@@ -139,10 +139,12 @@ location.post('/', async (c) => {
   const user = c.get('user')
   const body: any = await c.req.parseBody()
 
+  const country = await geocoderService.getCountry(body.lat, body.lon)
+
   let image: any = null
   if (body.image) image = await utils.saveImage(body.image, config.path.location)
 
-  await dao.location.add(body.name, body.description, image, body.lat, body.lon, body.categoryId, user.id)
+  await dao.location.add(body.name, body.description, image, body.lat, body.lon, body.categoryId, country?.id, user.id)
 
   return c.json({})
 })
