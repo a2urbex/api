@@ -5,6 +5,7 @@ import config from 'config'
 import fs from 'fs'
 import path from 'path'
 import { randomUUID } from 'crypto'
+import geocoderService from './geocoder'
 
 const SOURCE = 'Pinterest'
 
@@ -347,6 +348,9 @@ const pinterestService = {
         name = item.title ?? null
       }
 
+      const country = lat && lon ? await geocoderService.getCountry(lat, lon) : null
+      const category: any = null
+
       await dao.location.addPinterest(
         item.id,
         SOURCE,
@@ -356,6 +360,8 @@ const pinterestService = {
         item.title?.substring(0, 250) ?? name ?? null,
         item.description?.substring(0, 250) ?? null,
         `/${path.join(config.path.location, imgName)}`,
+        country?.id ?? null,
+        category?.id ?? null,
       )
 
       console.log(
@@ -367,6 +373,8 @@ const pinterestService = {
         item.title?.substring(0, 250) ?? name ?? null,
         item.description?.substring(0, 250) ?? null,
         `/${path.join(config.path.location, imgName)}`,
+        country?.id ?? null,
+        category?.id ?? null,
       )
 
       return true

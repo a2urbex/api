@@ -1,24 +1,24 @@
-import NodeGeocoder from 'node-geocoder'
+import * as crcLib from 'country-reverse-geocoding'
+import * as countries from 'i18n-iso-countries'
 import dao from 'dao'
 
-let geocoder: any = null
+const crc = crcLib.country_reverse_geocoding()
 
 const geocoderService = {
-  init: () => {
-    geocoder = NodeGeocoder({ provider: 'openstreetmap' })
-  },
-
   getCountry: async (lat: number, lon: number) => {
     if (lat == null || lon == null || lat < -90 || lat > 90 || lon < -180 || lon > 180) return
 
-    const res = await geocoder.reverse({ lat, lon })
-    if (!res.length || !res[0].countryCode) return
+    const result = crc.get_country(lat, lon)
+    if (!result?.code) return
 
-    const exist = await dao.country.getFromCode(res[0].countryCode)
+    const code = countries.alpha3ToAlpha2(result.code)
+    if (!code) return
+
+    const exist = await dao.country.getFromCode(code)
     if (exist) return exist
 
-    const add = await dao.country.add(res[0].country, res[0].countryCode)
-    return { id: add.insertId, name: res[0].country, code: res[0].countryCode }
+    const add = await dao.country.add(result.name, code)
+    return { id: add.insertId, name: result.name, code }
   },
 }
 

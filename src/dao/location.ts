@@ -201,9 +201,11 @@ const location = {
     name: string | null,
     description: string | null,
     imageDirect: string | null,
+    countryId: number | null,
+    categoryId: number | null,
   ) => {
-    const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, image) VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
-    return db.query(sql, [pid, source, url, lat, lon, name, description, imageDirect])
+    const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, image, country_id, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    return db.query(sql, [pid, source, url, lat, lon, name, description, imageDirect, countryId, categoryId])
   },
 
   getByPid: (pid: number, source: string) => {
