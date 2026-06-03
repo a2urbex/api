@@ -52,7 +52,7 @@ app.route('/admin', admin)
 
 new Cron('0 3 * * *', async () => {
   console.log('Daily pinterest fetch')
-  // pinterestService.fetch() // todo enable when ready
+    pinterestService.fetch()
 })
 
 export default {
