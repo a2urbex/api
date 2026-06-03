@@ -37,7 +37,11 @@ const locationService = {
     if (item.userRoles !== undefined) {
       if (Array.isArray(item.userRoles)) {
       } else if (typeof item.userRoles === 'string') {
-        try { item.userRoles = JSON.parse(item.userRoles) } catch { item.userRoles = [] }
+        try {
+          item.userRoles = JSON.parse(item.userRoles)
+        } catch {
+          item.userRoles = []
+        }
       } else {
         item.userRoles = []
       }

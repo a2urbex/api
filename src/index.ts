@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { serveStatic } from 'hono/bun'
 import { HTTPException } from 'hono/http-exception'
+import { Cron } from 'croner'
 
 import { start } from '@core/init'
 import config from 'config'
@@ -13,8 +14,9 @@ import favorite from 'controller/favorite'
 import friend from 'controller/friend'
 import user from 'controller/user'
 import admin from 'controller/admin'
+import pinterestService from 'service/pinterest'
 
-start()
+await start()
 
 const app = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -33,7 +35,7 @@ app.use(
     exposeHeaders: ['Content-Length'],
     maxAge: 600,
     credentials: true,
-  })
+  }),
 )
 
 app.options('*', (c) => {
@@ -47,6 +49,11 @@ app.route('/favorite', favorite)
 app.route('/friend', friend)
 app.route('/users', user)
 app.route('/admin', admin)
+
+new Cron('0 3 * * *', async () => {
+  console.log('Daily pinterest fetch')
+    pinterestService.fetch()
+})
 
 export default {
   port: config.port,

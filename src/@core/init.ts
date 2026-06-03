@@ -2,7 +2,7 @@ import config from 'config'
 import Db from '@core/Db'
 import daoList from 'dao'
 
-import geocoderService from 'service/geocoder'
+import categoryService from 'service/category'
 
 export const start = async () => {
   const start = new Date()
@@ -11,7 +11,7 @@ export const start = async () => {
   const db = new Db(config.mysql)
   loadDao(db)
 
-  geocoderService.init()
+  await categoryService.init()
 
   const end = new Date()
   console.log(`started in ${end.getTime() - start.getTime()}ms`)
