@@ -204,7 +204,7 @@ const location = {
     countryId: number | null,
     categoryId: number | null,
   ) => {
-    const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, image, country_id, category_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, image, country_id, category_id, date_add) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`
     return db.query(sql, [pid, source, url, lat, lon, name, description, imageDirect, countryId, categoryId])
   },
 
