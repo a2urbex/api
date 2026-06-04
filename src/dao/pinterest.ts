@@ -106,6 +106,20 @@ const pinterest = {
   deleteJob: async (id: string) => {
     return db.query(`DELETE FROM pinterest_job WHERE id = ?`, [id])
   },
+
+  /**
+   * Marks any job still flagged as 'running' as interrupted. Called at startup:
+   * the in-memory job is lost on restart, so a lingering 'running' row is a
+   * zombie that must be closed out.
+   */
+  markRunningAsInterrupted: async () => {
+    return db.query(
+      `UPDATE pinterest_job
+       SET state = 'error', error = 'Interrupted (server restart)', finished_at = NOW()
+       WHERE state = 'running'`,
+      []
+    )
+  },
 }
 
 export default pinterest

@@ -25,11 +25,15 @@ export interface PinterestStats {
 }
 
 export type Listener = (s: PinterestStats) => void
+export type LogListener = (line: string) => void
+
+const MAX_BUFFERED_LOGS = 400
 
 /**
  * Tracks the progress of a single Pinterest import run. Mirrors the DedupJob
  * pattern: subscribers receive a fresh snapshot on every emit, and the run can
- * be stopped cooperatively (checked between pins).
+ * be stopped cooperatively (checked between pins). It also keeps a bounded ring
+ * buffer of human-readable log lines streamed live to the admin UI.
  */
 export class PinterestJob {
   state: PinterestState = 'running'
@@ -41,7 +45,11 @@ export class PinterestJob {
   error?: string
   aborted = false
 
+  /** Bounded ring buffer of recent log lines (replayed to new subscribers). */
+  recentLogs: string[] = []
+
   private listeners = new Set<Listener>()
+  private logListeners = new Set<LogListener>()
 
   constructor(
     public readonly id: string,
@@ -53,6 +61,21 @@ export class PinterestJob {
     this.listeners.add(fn)
     fn(this.snapshot())
     return () => this.listeners.delete(fn)
+  }
+
+  /** Subscribe to log lines; the recent buffer is replayed immediately. */
+  subscribeLogs(fn: LogListener): () => void {
+    for (const line of this.recentLogs) fn(line)
+    this.logListeners.add(fn)
+    return () => this.logListeners.delete(fn)
+  }
+
+  /** Record a log line: buffered, broadcast to subscribers, and echoed to stdout. */
+  log(line: string): void {
+    this.recentLogs.push(line)
+    if (this.recentLogs.length > MAX_BUFFERED_LOGS) this.recentLogs.shift()
+    for (const fn of this.logListeners) fn(line)
+    console.log(`[pinterest] ${line}`)
   }
 
   stop(): void {
@@ -263,17 +286,20 @@ const pinterestService = {
     try {
       fs.mkdirSync(outputDir, { recursive: true })
 
-      console.log('Logging in to Pinterest via browser...')
+      job.log('Logging in to Pinterest via browser...')
       cookies = await loginAndGetCookies(config.pinterest.email, config.pinterest.password)
-      console.log('Login successful, cookies extracted.')
+      job.log('Login successful, cookies extracted.')
 
       await pinterestService.getFeed(cookies, job)
 
       job.state = job.aborted ? 'stopped' : 'finished'
+      job.log(job.aborted ? 'Run stopped by user.' : 'Run finished.')
     } catch (error) {
+      const msg = error instanceof Error ? error.message : String(error)
       console.error('Pinterest run failed:', error)
       job.state = 'error'
-      job.error = error instanceof Error ? error.message : String(error)
+      job.error = msg
+      job.log(`ERROR: ${msg}`)
     } finally {
       running = false
       if (cookies?.driver) {
@@ -375,7 +401,7 @@ const pinterestService = {
       throw new Error('No BoardFeedResource response intercepted after scrolling.')
     }
 
-    console.log('Intercepted Pinterest response, pins:', intercepted?.resource_response?.data?.length)
+    job.log(`Intercepted Pinterest response — ${intercepted?.resource_response?.data?.length ?? 0} pins on this page`)
     await pinterestService.parseFeed(intercepted, cookies, job)
   },
 
@@ -398,11 +424,16 @@ const pinterestService = {
       }
     }
 
+    const rssMb = Math.round(process.memoryUsage().rss / 1048576)
+    job.log(
+      `Page done — processed=${job.processed} inserted=${job.inserted} skipped=${job.skipped} failed=${job.failed} (rss ${rssMb}MB)`,
+    )
+
     const bookmarks: string[] | undefined = json?.resource?.options?.bookmarks
     const isEnd = !bookmarks || bookmarks[0] === '-end-'
 
     if (isEnd || job.aborted) {
-      console.log('Reached end of board feed.')
+      job.log('Reached end of board feed.')
       return
     }
 
@@ -419,19 +450,17 @@ const pinterestService = {
    */
   savePin: async (item: PinItem, job: PinterestJob): Promise<void> => {
     const SOURCE = job.source
-    console.log(`Processing pin ${item.id}...`)
 
     try {
       const exists = await dao.location.getByPid(item.id, SOURCE)
       if (exists) {
-        console.log(`Pin ${item.id} already exists, skipping.`)
         job.skipped++
         return
       }
 
       const imgUrl = item?.images?.orig?.url
       if (!imgUrl) {
-        console.warn(`Pin ${item.id} has no image URL, skipping.`)
+        job.log(`Pin ${item.id} has no image URL, skipping.`)
         job.skipped++
         return
       }
@@ -495,8 +524,10 @@ const pinterestService = {
       )
 
       job.inserted++
+      job.log(`Imported pin ${item.id}${name ? ` — ${name}` : ''}`)
     } catch (error) {
-      console.error(`Error saving pin ${item.id}:`, error)
+      const msg = error instanceof Error ? error.message : String(error)
+      job.log(`Failed pin ${item.id}: ${msg}`)
       job.failed++
     }
   },
