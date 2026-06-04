@@ -69,6 +69,8 @@ const buildDriver = (): WebDriver => {
       new Chrome.Options()
         .windowSize({ width: 1920, height: 1080 })
         .addArguments('--headless')
+        .addArguments('--no-sandbox')
+        .addArguments('--disable-dev-shm-usage')
         .addArguments('--disable-gpu', '--log-level=3'),
     )
     .build() as unknown as WebDriver
