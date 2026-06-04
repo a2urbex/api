@@ -10,8 +10,14 @@ import { authMiddleware, authQueryMiddleware, adminMiddleware } from 'service/mi
 import { DedupJob, registry } from 'service/dedup'
 import importService from 'service/import'
 import geocoderService from 'service/geocoder'
+import pinterestService from 'service/pinterest'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
+
+admin.get('/test/pinterest', async (c) => {
+  await pinterestService.fetch()
+  return c.json({ message: 'Pinterest route is working!' })
+})
 
 /**
  * POST /admin/dedup/start
