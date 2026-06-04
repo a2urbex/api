@@ -50,4 +50,9 @@ export default {
     email: process.env.PINTEREST_EMAIL as string,
     password: process.env.PINTEREST_PASSWORD as string,
   },
+
+  selenium: {
+    chromeBinaryPath: process.env.CHROME_BINARY_PATH,
+    chromedriverPath: process.env.CHROMEDRIVER_PATH,
+  },
 }
