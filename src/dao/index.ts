@@ -8,6 +8,7 @@ import location from './location'
 import user from './user'
 import source from './source'
 import token from './token'
+import pinterest from './pinterest'
 
 export default {
   category,
@@ -20,4 +21,5 @@ export default {
   user,
   source,
   token,
+  pinterest,
 }

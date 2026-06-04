@@ -10,14 +10,9 @@ import { authMiddleware, authQueryMiddleware, adminMiddleware } from 'service/mi
 import { DedupJob, registry } from 'service/dedup'
 import importService from 'service/import'
 import geocoderService from 'service/geocoder'
-import pinterestService from 'service/pinterest'
+import pinterestService, { PinterestJob, registry as pinterestRegistry } from 'service/pinterest'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
-
-admin.get('/test/pinterest', async (c) => {
-  await pinterestService.fetch()
-  return c.json({ message: 'Pinterest route is working!' })
-})
 
 /**
  * POST /admin/dedup/start
@@ -264,6 +259,163 @@ admin.get('/imports', authMiddleware, adminMiddleware, async (c) => {
  */
 admin.delete('/imports/:id', authMiddleware, adminMiddleware, async (c) => {
   await dao.importJob.delete(c.req.param('id'))
+  return c.json({ ok: true })
+})
+
+/* -------------------------------------------------------------------------- */
+/* Pinterest import management                                                */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * POST /admin/pinterest/run
+ * Starts a manual Pinterest import run. Returns the job id immediately; progress
+ * is streamed over /admin/pinterest/:id/stream. 409 if a run is already running.
+ */
+admin.post('/pinterest/run', authMiddleware, adminMiddleware, async (c) => {
+  const user = c.get('user')
+  if (pinterestService.isRunning()) {
+    throw new HTTPException(409, { message: 'A Pinterest run is already in progress' })
+  }
+
+  const source = await pinterestService.resolveSource()
+  const id = randomUUID()
+  const job = new PinterestJob(id, source.name)
+  pinterestRegistry.add(job)
+
+  await dao.pinterest.createJob(id, 'manual', source.id, user.id)
+
+  // Fire and forget — progress is observed via SSE.
+  ;(async () => {
+    try {
+      await pinterestService.fetch(job)
+    } catch (e) {
+      console.error('Pinterest job failed', e)
+    } finally {
+      await dao.pinterest.updateJob(
+        id,
+        job.state,
+        job.processed,
+        job.inserted,
+        job.skipped,
+        job.failed,
+        job.error ?? null,
+      )
+    }
+  })()
+
+  return c.json({ id, source: source.name })
+})
+
+/**
+ * GET /admin/pinterest/settings
+ * Returns the current cron + source configuration.
+ */
+admin.get('/pinterest/settings', authMiddleware, adminMiddleware, async (c) => {
+  const settings = await dao.pinterest.getSettings()
+  return c.json(settings)
+})
+
+/**
+ * PATCH /admin/pinterest/settings
+ * Updates the cron enabled flag, cron expression and/or assigned source.
+ *
+ * body @param {boolean} cronEnabled - Optional
+ * body @param {string} cronExpression - Optional
+ * body @param {number|null} sourceId - Optional - source assigned to imported points
+ */
+admin.patch('/pinterest/settings', authMiddleware, adminMiddleware, async (c) => {
+  let body: any = {}
+  try {
+    body = await c.req.json()
+  } catch (_) {
+    /* empty body allowed */
+  }
+
+  const patch: { cronEnabled?: boolean; cronExpression?: string; sourceId?: number | null } = {}
+  if (body.cronEnabled !== undefined) patch.cronEnabled = !!body.cronEnabled
+  if (body.cronExpression !== undefined) patch.cronExpression = String(body.cronExpression).slice(0, 64)
+  if (body.sourceId !== undefined) {
+    patch.sourceId = body.sourceId === null || body.sourceId === '' ? null : parseInt(body.sourceId)
+  }
+
+  await dao.pinterest.updateSettings(patch)
+  const settings = await dao.pinterest.getSettings()
+  return c.json(settings)
+})
+
+/**
+ * GET /admin/pinterest
+ * History of past runs + current settings + live running flag.
+ */
+admin.get('/pinterest', authMiddleware, adminMiddleware, async (c) => {
+  const list = await dao.pinterest.listJobs(20)
+  const settings = await dao.pinterest.getSettings()
+  return c.json({ list, settings, running: pinterestService.isRunning() })
+})
+
+/**
+ * POST /admin/pinterest/:id/stop
+ * Signals a running job to stop gracefully (checked between pins).
+ */
+admin.post('/pinterest/:id/stop', authMiddleware, adminMiddleware, (c) => {
+  const job = pinterestRegistry.get(c.req.param('id'))
+  if (!job) throw new HTTPException(404, { message: 'Job not found' })
+  job.stop()
+  return c.json({ ok: true })
+})
+
+/**
+ * GET /admin/pinterest/:id/stream?token=JWT
+ * Server-Sent Events stream of live stats. Token is passed as a query parameter
+ * because EventSource cannot set custom headers.
+ */
+admin.get('/pinterest/:id/stream', authQueryMiddleware, adminMiddleware, (c) => {
+  const job = pinterestRegistry.get(c.req.param('id'))
+  if (!job) throw new HTTPException(404, { message: 'Job not found' })
+
+  return streamSSE(c, async (stream) => {
+    let unsub: () => void = () => {}
+    let resolveDone: () => void = () => {}
+
+    stream.onAbort(() => {
+      unsub?.()
+      resolveDone?.()
+    })
+
+    await new Promise<void>((resolve) => {
+      resolveDone = resolve
+      unsub = job.subscribe(async (s) => {
+        try {
+          await stream.writeSSE({ event: 'stats', data: JSON.stringify(s) })
+        } catch (_) {
+          // client disconnected
+        }
+        if (s.state === 'finished' || s.state === 'stopped' || s.state === 'error') {
+          resolve()
+        }
+      })
+    })
+
+    unsub?.()
+  })
+})
+
+/**
+ * GET /admin/pinterest/:id
+ * Returns the current snapshot (REST polling fallback).
+ */
+admin.get('/pinterest/:id', authMiddleware, adminMiddleware, (c) => {
+  const job = pinterestRegistry.get(c.req.param('id'))
+  if (!job) throw new HTTPException(404, { message: 'Job not found' })
+  return c.json(job.snapshot())
+})
+
+/**
+ * DELETE /admin/pinterest/:id
+ * Delete a history entry (does not delete the imported locations).
+ */
+admin.delete('/pinterest/:id', authMiddleware, adminMiddleware, async (c) => {
+  await dao.pinterest.deleteJob(c.req.param('id'))
   return c.json({ ok: true })
 })
 
