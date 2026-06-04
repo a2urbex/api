@@ -25,6 +25,117 @@ admin.get('/sources', authMiddleware, adminMiddleware, async (c) => {
 })
 
 /**
+ * POST /admin/sources
+ * Create a new source.
+ * body @param {string} name
+ */
+admin.post('/sources', authMiddleware, adminMiddleware, async (c) => {
+  let body: any = {}
+  try {
+    body = await c.req.json()
+  } catch (_) {
+    /* empty body */
+  }
+  const name = (body.name ?? '').toString().trim()
+  if (!name) throw new HTTPException(400, { message: 'Name is required' })
+
+  const existing = await dao.source.getByName(name)
+  if (existing) throw new HTTPException(409, { message: `Source "${name}" already exists` })
+
+  const res: any = await dao.source.create(name)
+  return c.json({ id: res.insertId, name })
+})
+
+/**
+ * PATCH /admin/sources/:id
+ * Rename a source and reassign its locations to the new name.
+ * body @param {string} name
+ */
+admin.patch('/sources/:id', authMiddleware, adminMiddleware, async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (!id) throw new HTTPException(400, { message: 'Invalid id' })
+
+  let body: any = {}
+  try {
+    body = await c.req.json()
+  } catch (_) {
+    /* empty body */
+  }
+  const name = (body.name ?? '').toString().trim()
+  if (!name) throw new HTTPException(400, { message: 'Name is required' })
+
+  const source = await dao.source.getById(id)
+  if (!source) throw new HTTPException(404, { message: 'Source not found' })
+
+  const clash = await dao.source.getByName(name)
+  if (clash && clash.id !== id) throw new HTTPException(409, { message: `Source "${name}" already exists` })
+
+  // Keep location.source (string) in sync with the renamed source.
+  if (source.name !== name) await dao.source.renameLocations(source.name, name)
+  await dao.source.rename(id, name)
+  return c.json({ id, name })
+})
+
+/**
+ * DELETE /admin/sources/:id
+ * Delete a source. Refused if locations still reference it (merge first).
+ */
+admin.delete('/sources/:id', authMiddleware, adminMiddleware, async (c) => {
+  const id = parseInt(c.req.param('id'))
+  if (!id) throw new HTTPException(400, { message: 'Invalid id' })
+
+  const source = await dao.source.getById(id)
+  if (!source) throw new HTTPException(404, { message: 'Source not found' })
+
+  const count: any = await dao.source.countLocations(source.name)
+  if (Number(count?.c ?? 0) > 0) {
+    throw new HTTPException(409, {
+      message: `Cannot delete: ${count.c} location(s) still use this source. Merge first.`,
+    })
+  }
+
+  await dao.source.delete(id)
+  return c.json({ ok: true })
+})
+
+/**
+ * POST /admin/sources/merge
+ * Reassign all locations of the given sources to the target, then delete them.
+ * body @param {number} targetId
+ * body @param {number[]} sourceIds - sources to merge into the target (target id is ignored if present)
+ */
+admin.post('/sources/merge', authMiddleware, adminMiddleware, async (c) => {
+  let body: any = {}
+  try {
+    body = await c.req.json()
+  } catch (_) {
+    /* empty body */
+  }
+
+  const targetId = parseInt(body.targetId)
+  const sourceIds: number[] = Array.isArray(body.sourceIds)
+    ? body.sourceIds.map((x: any) => parseInt(x)).filter((x: number) => x && x !== targetId)
+    : []
+
+  if (!targetId) throw new HTTPException(400, { message: 'targetId is required' })
+  if (!sourceIds.length) throw new HTTPException(400, { message: 'No sources to merge' })
+
+  const target = await dao.source.getById(targetId)
+  if (!target) throw new HTTPException(404, { message: 'Target source not found' })
+
+  let merged = 0
+  for (const sid of sourceIds) {
+    const src = await dao.source.getById(sid)
+    if (!src) continue
+    await dao.source.renameLocations(src.name, target.name)
+    await dao.source.delete(sid)
+    merged++
+  }
+
+  return c.json({ ok: true, merged, target: target.name })
+})
+
+/**
  * POST /admin/dedup/start
  * Starts a deduplication job. Returns the job id immediately; progress is
  * streamed over /admin/dedup/:id/stream.
