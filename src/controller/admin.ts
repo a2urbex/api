@@ -15,6 +15,16 @@ import pinterestService, { PinterestJob, registry as pinterestRegistry } from 's
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
 /**
+ * GET /admin/sources
+ * List of sources with their active location counts. Used by the import and
+ * Pinterest admin screens to populate the source selector.
+ */
+admin.get('/sources', authMiddleware, adminMiddleware, async (c) => {
+  const list = await dao.source.getListWithCounts()
+  return c.json({ list })
+})
+
+/**
  * POST /admin/dedup/start
  * Starts a deduplication job. Returns the job id immediately; progress is
  * streamed over /admin/dedup/:id/stream.
@@ -374,17 +384,29 @@ admin.get('/pinterest/:id/stream', authQueryMiddleware, adminMiddleware, (c) => 
   if (!job) throw new HTTPException(404, { message: 'Job not found' })
 
   return streamSSE(c, async (stream) => {
-    let unsub: () => void = () => {}
+    let unsubStats: () => void = () => {}
+    let unsubLogs: () => void = () => {}
     let resolveDone: () => void = () => {}
 
     stream.onAbort(() => {
-      unsub?.()
+      unsubStats?.()
+      unsubLogs?.()
       resolveDone?.()
     })
 
     await new Promise<void>((resolve) => {
       resolveDone = resolve
-      unsub = job.subscribe(async (s) => {
+
+      // Replay buffered logs + stream new ones as 'log' events.
+      unsubLogs = job.subscribeLogs(async (line) => {
+        try {
+          await stream.writeSSE({ event: 'log', data: line })
+        } catch (_) {
+          // client disconnected
+        }
+      })
+
+      unsubStats = job.subscribe(async (s) => {
         try {
           await stream.writeSSE({ event: 'stats', data: JSON.stringify(s) })
         } catch (_) {
@@ -396,7 +418,8 @@ admin.get('/pinterest/:id/stream', authQueryMiddleware, adminMiddleware, (c) => 
       })
     })
 
-    unsub?.()
+    unsubStats?.()
+    unsubLogs?.()
   })
 })
 

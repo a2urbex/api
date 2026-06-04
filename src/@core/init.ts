@@ -13,6 +13,13 @@ export const start = async () => {
 
   await categoryService.init()
 
+  // Close out any Pinterest job left 'running' by a previous process instance.
+  try {
+    await daoList.pinterest.markRunningAsInterrupted()
+  } catch (e) {
+    console.error('Failed to clean up stale Pinterest jobs', e)
+  }
+
   const end = new Date()
   console.log(`started in ${end.getTime() - start.getTime()}ms`)
 }
