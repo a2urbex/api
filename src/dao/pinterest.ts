@@ -7,11 +7,17 @@ const pinterest = {
     db = db1
   },
 
+  /** Ensures the singleton settings row (id=1) exists. */
+  ensureSettingsRow: async () => {
+    return db.query(`INSERT IGNORE INTO pinterest_settings (id) VALUES (1)`, [])
+  },
+
   /**
-   * Returns the single settings row (id=1), joined with the source name for display.
+   * Returns the single settings row (id=1), joined with the source name for
+   * display. Always returns a usable object, even if the row is missing.
    */
   getSettings: async () => {
-    return db.query(
+    const row = await db.query(
       `SELECT s.id, s.cron_enabled, s.cron_expression, s.source_id, src.name AS source_name
        FROM pinterest_settings s
        LEFT JOIN source src ON src.id = s.source_id
@@ -19,16 +25,28 @@ const pinterest = {
       [],
       0
     )
+    return (
+      row ?? {
+        id: 1,
+        cron_enabled: 1,
+        cron_expression: '0 3 * * *',
+        source_id: null,
+        source_name: null,
+      }
+    )
   },
 
   /**
    * Partial update of the settings row. Only provided fields are written.
+   * Creates the row first if it does not exist yet.
    */
   updateSettings: async (patch: {
     cronEnabled?: boolean
     cronExpression?: string
     sourceId?: number | null
   }) => {
+    await pinterest.ensureSettingsRow()
+
     const sets: string[] = []
     const params: any[] = []
 
