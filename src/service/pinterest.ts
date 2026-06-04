@@ -63,17 +63,27 @@ const toOriginalUrl = (url: string): string => {
  * @returns {WebDriver}
  */
 const buildDriver = (): WebDriver => {
-  return new Builder()
+  const options = new Chrome.Options()
+    .windowSize({ width: 1920, height: 1080 })
+    .addArguments('--headless')
+    .addArguments('--no-sandbox')
+    .addArguments('--disable-dev-shm-usage')
+    .addArguments('--disable-gpu', '--log-level=3')
+
+  if (config.selenium?.chromeBinaryPath) {
+    options.setChromeBinaryPath(config.selenium.chromeBinaryPath)
+  }
+
+  const builder = new Builder()
     .forBrowser('chrome')
-    .setChromeOptions(
-      new Chrome.Options()
-        .windowSize({ width: 1920, height: 1080 })
-        .addArguments('--headless')
-        .addArguments('--no-sandbox')
-        .addArguments('--disable-dev-shm-usage')
-        .addArguments('--disable-gpu', '--log-level=3'),
-    )
-    .build() as unknown as WebDriver
+    .setChromeOptions(options)
+
+  if (config.selenium?.chromedriverPath) {
+    const service = new Chrome.ServiceBuilder(config.selenium.chromedriverPath)
+    builder.setChromeService(service)
+  }
+
+  return builder.build() as unknown as WebDriver
 }
 
 /**
