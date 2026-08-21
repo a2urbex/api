@@ -1,5 +1,5 @@
 ![image](https://github.com/user-attachments/assets/7a9faf7f-6cdb-434d-bbc2-c41c6ce98eb9)
-
+ 
 
 <h1 align="center"> a2urbex - Your exploration co-pilot</h1>
 <p align="center">
