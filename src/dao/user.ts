@@ -90,6 +90,16 @@ const user = {
     const sql = `SELECT password FROM user WHERE id = ?`
     return db.query(sql, [id], 0)
   },
+
+  getDefaultCountry: (id: number) => {
+    const sql = `SELECT default_country FROM user WHERE id = ?`
+    return db.query(sql, [id], 0)
+  },
+
+  setDefaultCountry: (id: number, code: string | null) => {
+    const sql = `UPDATE user SET default_country = ? WHERE id = ?`
+    return db.query(sql, [code, id])
+  },
 }
 
 export default user

@@ -9,6 +9,10 @@ const country = {
     const sql = `SELECT id, name FROM country ORDER BY name ASC`
     return db.query(sql)
   },
+  getListWithCode: () => {
+    const sql = `SELECT id, name, code FROM country WHERE code IS NOT NULL ORDER BY name ASC`
+    return db.query(sql)
+  },
   getFromCode: (code: string) => {
     const sql = `SELECT * FROM country WHERE code = ?`
     return db.query(sql, [code], 0)

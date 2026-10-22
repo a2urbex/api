@@ -7,6 +7,7 @@ import utils from '@core/utils'
 import config from 'config'
 
 import { authMiddleware, getUser } from 'service/middleware'
+import geocoderService from 'service/geocoder'
 
 const account = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -127,6 +128,64 @@ account.put('/', async (c) => {
   await dao.user.update(user.id, body.about, body.youtube, body.tiktok, body.instagram, image, banner)
 
   return c.json({})
+})
+
+/**
+ * GET /account/country
+ * @description Resolve the default country: account setting > detected (lat/lon, then Accept-Language) > FR
+ *
+ * query @param {number} lat - Optional - only sent when the browser already granted geolocation
+ * query @param {number} lon - Optional
+ *
+ * @returns {{ setting: string|null, code: string, countryId: number|null, source: string, countries: {code: string, name: string}[] }}
+ */
+account.get('/country', async (c) => {
+  const user = c.get('user')
+  const row = await dao.user.getDefaultCountry(user.id)
+  const setting: string | null = row?.default_country || null
+
+  let code = setting
+  let source = 'account'
+  let countryId: number | null = null
+
+  if (!code) {
+    const lat = parseFloat(c.req.query('lat') || '')
+    const lon = parseFloat(c.req.query('lon') || '')
+    if (Number.isFinite(lat) && Number.isFinite(lon)) {
+      const found = await geocoderService.getCountry(lat, lon)
+      if (found) [code, countryId, source] = [found.code, found.id, 'geolocation']
+    }
+  }
+
+  if (!code) {
+    const region = (c.req.header('accept-language') || '').match(/^[a-z]{2,3}-([A-Z]{2})/i)?.[1]?.toUpperCase()
+    if (region) [code, source] = [region, 'language']
+  }
+
+  const countries = await dao.country.getListWithCode()
+  if (!countryId) countryId = countries.find((x: any) => x.code === code)?.id ?? null
+  if (!countryId) {
+    code = 'FR'
+    source = 'default'
+    countryId = countries.find((x: any) => x.code === 'FR')?.id ?? null
+  }
+
+  return c.json({ setting, code, countryId, source, countries: countries.map((x: any) => ({ code: x.code, name: x.name })) })
+})
+
+/**
+ * PUT /account/country
+ * @description Set default country (null = Auto)
+ *
+ * body @param {string|null} code - ISO alpha-2 code
+ */
+account.put('/country', async (c) => {
+  const user = c.get('user')
+  const { code } = await c.req.json()
+  const value = typeof code === 'string' && /^[A-Z]{2}$/.test(code) ? code : null
+
+  await dao.user.setDefaultCountry(user.id, value)
+  return c.json({ setting: value })
 })
 
 /**
