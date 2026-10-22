@@ -1,4 +1,5 @@
 import { Hono } from 'hono'
+import { HTTPException } from 'hono/http-exception'
 
 import dao from 'dao'
 import utils from '@core/utils'
@@ -86,9 +87,9 @@ location.get('/filter', async (c) => {
 location.post('/p/:page{[0-9]+}', async (c) => {
   const user = c.get('user')
   const page = parseInt(c.req.param('page'))
-  const { string, categories, countries, sources } = await c.req.json()
+  const { string, categories, countries, sources, showInvalid } = await c.req.json()
 
-  const data = await locationService.getLocations(user, { string, categories, countries, sources, page })
+  const data = await locationService.getLocations(user, { string, categories, countries, sources, showInvalid, page })
   return c.json(data)
 })
 
@@ -105,10 +106,29 @@ location.post('/p/:page{[0-9]+}', async (c) => {
  */
 location.post('/map', async (c) => {
   const user = c.get('user')
-  const { string, categories, countries, sources } = await c.req.json()
+  const { string, categories, countries, sources, showInvalid, statuses, ratings, dateFrom, dateTo, zone } = await c.req.json()
 
-  const data = await locationService.getLocations(user, { string, categories, countries, sources })
+  const filters = { string, categories, countries, sources, showInvalid, statuses, ratings, dateFrom, dateTo }
+  const data = await locationService.getLocations(user, filters, false, locationService.parseZone(zone))
   return c.json(data)
+})
+
+/**
+ * POST /location/histogram
+ * @description Weekly import counts for the date slider (same filters as /map, date range ignored)
+ *
+ * @returns {{week: string, total: number}[]}
+ */
+location.post('/histogram', async (c) => {
+  const user = c.get('user')
+  const { string, categories, countries, sources, showInvalid, statuses, ratings } = await c.req.json()
+  const filters: SearchFilters = { string, categories, countries, sources, showInvalid, statuses, ratings }
+
+  if (!utils.isSuperUser(user)) {
+    filters.users = [user.id, ...(await dao.friend.getUserFriends(user.id))]
+    delete filters.sources
+  }
+  return c.json(await dao.location.getImportHistogram(filters))
 })
 
 /**
@@ -182,6 +202,35 @@ location.put('/:id', locationMiddleware, async (c) => {
   await dao.location.update(id, body.name, body.description, image, body.lat, body.lon, body.categoryId, countryId)
 
   return c.json({})
+})
+
+const RATINGS = ['amazing', 'nice', 'meh', 'empty']
+const REASONS = ['walled', 'no_access', 'demolished', 'guarded', 'reused', 'not_found']
+
+/**
+ * POST /location/:id/visit
+ * @description Field mode: record a visit status (never deletes the point)
+ *
+ * body @param {'valid'|'invalid'} status
+ * body @param {string} rating - valid only
+ * body @param {string} reason - invalid only
+ * body @param {boolean} danger
+ */
+location.post('/:id/visit', async (c) => {
+  const user = c.get('user')
+  const id = parseInt(utils.decrypt(c.req.param('id'), 'location'))
+  const { status, rating, reason, danger } = await c.req.json()
+
+  if (status !== 'valid' && status !== 'invalid') throw new HTTPException(400, { message: 'Invalid status' })
+  const r = status === 'valid' && RATINGS.includes(rating) ? rating : null
+  const why = status === 'invalid' ? (REASONS.includes(reason) ? reason : 'not_found') : null
+
+  await locationService.hasAccess(id, user)
+  await dao.location.setStatus(id, status, r, why, !!danger)
+  await dao.location.addVisit(id, user.id, status, r, why, !!danger)
+
+  const item = await dao.location.get(id, user.id)
+  return c.json(item ? locationService.formatLocation(item) : {})
 })
 
 /**

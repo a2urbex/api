@@ -47,6 +47,33 @@ const location = {
       params.push(filters.favoriteId)
     }
 
+    if (filters.bbox) {
+      WHERE += ' AND l.lat BETWEEN ? AND ? AND l.lon BETWEEN ? AND ?'
+      params.push(filters.bbox[0], filters.bbox[2], filters.bbox[1], filters.bbox[3])
+    }
+
+    if (filters.statuses?.length) {
+      WHERE += ' AND l.status IN (?)'
+      params.push(filters.statuses)
+    }
+
+    if (filters.ratings?.length) {
+      WHERE += ' AND l.rating IN (?)'
+      params.push(filters.ratings)
+    }
+
+    if (filters.dateFrom) {
+      WHERE += ' AND l.date_add >= ?'
+      params.push(new Date(filters.dateFrom))
+    }
+
+    if (filters.dateTo) {
+      WHERE += ' AND l.date_add <= ?'
+      params.push(new Date(filters.dateTo))
+    }
+
+    if (!filters.showInvalid) WHERE += " AND l.status <> 'invalid'"
+
     if (filters.page) {
       LIMIT += `LIMIT ${config.pageSize * (filters.page - 1)}, ${config.pageSize}`
     }
@@ -56,7 +83,7 @@ const location = {
 
   get: (id: number, userId: number) => {
     const sql = `
-      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
+      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, l.status, l.rating, l.invalid_reason invalidReason, l.danger, l.visited_at visitedAt, l.date_add dateAdd, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
         u.username userUsername, u.image userImage, u.roles userRoles,
         GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
@@ -80,7 +107,7 @@ const location = {
     const [WHERE, params, LIMIT] = location.getFilters(filters)
 
     const sql = `
-      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
+      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, l.status, l.rating, l.invalid_reason invalidReason, l.danger, l.visited_at visitedAt, l.date_add dateAdd, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
         u.username userUsername, u.image userImage, u.roles userRoles,
         GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
@@ -103,6 +130,19 @@ const location = {
     const sql = `SELECT COUNT(id) total FROM location l LEFT JOIN favorite_location fl ON fl.location_id = l.id WHERE 1 ${WHERE} AND l.dedup_removed_at IS NULL`
 
     return db.query(sql, params, 0)
+  },
+
+  // Weekly import counts (Monday-based weeks) for the date slider histogram
+  getImportHistogram: (filters: SearchFilters) => {
+    const [WHERE, params] = location.getFilters({ ...filters, dateFrom: undefined, dateTo: undefined, page: undefined })
+    const sql = `
+      SELECT DATE_FORMAT(DATE_SUB(DATE(l.date_add), INTERVAL WEEKDAY(l.date_add) DAY), '%Y-%m-%d') week, COUNT(*) total
+      FROM location l
+      WHERE 1 ${WHERE} AND l.date_add IS NOT NULL AND l.lat IS NOT NULL AND l.dedup_removed_at IS NULL
+      GROUP BY week
+      ORDER BY week
+    `
+    return db.query(sql, params)
   },
 
   getUserList: (userId: number) => {
@@ -206,6 +246,24 @@ const location = {
   ) => {
     const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, image, country_id, category_id, date_add) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`
     return db.query(sql, [pid, source, url, lat, lon, name, description, imageDirect, countryId, categoryId])
+  },
+
+  setStatus: (id: number, status: string, rating: string | null, reason: string | null, danger: boolean) => {
+    const sql = `UPDATE location SET status = ?, rating = ?, invalid_reason = ?, danger = ?, visited_at = NOW() WHERE id = ?`
+    return db.query(sql, [status, rating, reason, danger ? 1 : 0, id])
+  },
+
+  addVisit: (id: number, userId: number, status: string, rating: string | null, reason: string | null, danger: boolean) => {
+    const sql = `INSERT INTO location_visit (location_id, user_id, status, rating, invalid_reason, danger) VALUES (?, ?, ?, ?, ?, ?)`
+    return db.query(sql, [id, userId, status, rating, reason, danger ? 1 : 0])
+  },
+
+  // ~30 m box; used by importers so invalid points are never recreated
+  findInvalidNear: (lat: number, lon: number, deltaDeg: number = 0.00027) => {
+    const sql = `SELECT id FROM location
+                 WHERE status = 'invalid' AND lat BETWEEN ? AND ? AND lon BETWEEN ? AND ?
+                 LIMIT 1`
+    return db.query(sql, [lat - deltaDeg, lat + deltaDeg, lon - deltaDeg, lon + deltaDeg], 0)
   },
 
   getByPid: (pid: number, source: string) => {

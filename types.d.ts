@@ -29,7 +29,17 @@ interface SearchFilters {
   users?: number[]
   page?: number
   favoriteId?: number
+  showInvalid?: boolean
+  bbox?: [number, number, number, number]
+  statuses?: string[]
+  ratings?: string[]
+  dateFrom?: string
+  dateTo?: string
 }
+
+type Zone =
+  | { type: 'circle'; lat: number; lon: number; radius: number }
+  | { type: 'polygon'; points: [number, number][] }
 
 interface Location {
   id: string
