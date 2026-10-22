@@ -7,7 +7,7 @@ const favorite = {
 
   getList: (userId: number) => {
     const sql = `
-      SELECT f.id, f.name, f.share, f.disabled, COUNT(fl.favorite_id) count FROM favorite f
+      SELECT f.id, f.name, f.share, f.disabled, f.status, COUNT(fl.favorite_id) count FROM favorite f
       LEFT JOIN favorite_user fu ON fu.favorite_id = f.id
       LEFT JOIN favorite_location fl ON fl.favorite_id = f.id
       WHERE fu.user_id = ?
@@ -18,8 +18,13 @@ const favorite = {
   },
 
   get: (id: number) => {
-    const sql = `SELECT f.id, f.name, f.master, f.share, f.disabled FROM favorite f WHERE f.id = ?`
+    const sql = `SELECT f.id, f.name, f.master, f.share, f.disabled, f.status FROM favorite f WHERE f.id = ?`
     return db.query(sql, [id], 0)
+  },
+
+  setStatus: (id: number, status: string) => {
+    const sql = `UPDATE favorite SET status = ? WHERE id = ?`
+    return db.query(sql, [status, id])
   },
 
   add: (name: string, master: boolean = false) => {
@@ -33,6 +38,15 @@ const favorite = {
   addLocation: (id: number, locationId: number) => {
     const sql = `INSERT INTO favorite_location (favorite_id, location_id) VALUES (?, ?)`
     return db.query(sql, [id, locationId])
+  },
+
+  addLocations: async (id: number, locationIds: number[]) => {
+    if (!locationIds.length) return 0
+    const existing = await db.query(`SELECT location_id FROM favorite_location WHERE favorite_id = ?`, [id])
+    const have = new Set(existing.map((r: any) => r.location_id))
+    const rows = [...new Set(locationIds)].filter((l) => !have.has(l)).map((l) => [id, l])
+    if (rows.length) await db.batch(`INSERT INTO favorite_location (favorite_id, location_id) VALUES `, rows)
+    return rows.length
   },
 
   hasLocation: (id: number, locationId: number) => {

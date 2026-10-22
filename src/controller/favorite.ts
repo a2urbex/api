@@ -31,8 +31,8 @@ favorite.get('/:id{[0-9a-z]{24,}}', async (c) => {
 
   if (isPrivate) throw new HTTPException(403, { message: 'Favorite is private' })
 
-  const data = await locationService.getLocations(user, { favoriteId: id })
-  return c.json({ name: fav.name, ...data })
+  const data = await locationService.getLocations(user, { favoriteId: id, showInvalid: c.req.query('showInvalid') === '1' })
+  return c.json({ name: fav.name, status: fav.status, ...data })
 })
 
 /**
@@ -130,6 +130,22 @@ favorite.put('/:id/location/:locationId', favoriteMiddleware, async (c) => {
   else await dao.favorite.addLocation(id, locId)
 
   return c.json({})
+})
+
+/**
+ * POST /favorite/:id/locations
+ * @description Add many locations to a list at once (zone results)
+ *
+ * body @param {string[]} ids - Location encoded ids
+ */
+favorite.post('/:id/locations', favoriteMiddleware, async (c) => {
+  const id = c.get('id')
+  const { ids } = await c.req.json()
+  if (!Array.isArray(ids) || ids.length > 5000) throw new HTTPException(400, { message: 'Invalid ids' })
+
+  const locationIds = ids.map((e: string) => parseInt(utils.decrypt(e, 'location'))).filter(Number.isFinite)
+  const added = await dao.favorite.addLocations(id, locationIds)
+  return c.json({ added })
 })
 
 /**
