@@ -7,12 +7,13 @@ import dao from 'dao'
 import utils from '@core/utils'
 import config from 'config'
 import { authMiddleware, authQueryMiddleware, adminMiddleware } from 'service/middleware'
-import { DedupJob, registry } from 'service/dedup'
+import { DedupJob, registry, startDedup } from 'service/dedup'
 import importService from 'service/import'
 import geocoderService from 'service/geocoder'
 import pinterestService, { PinterestJob, registry as pinterestRegistry } from 'service/pinterest'
 import { notify, reportImport, CHANNELS, Channel } from 'service/notify'
 import { listImporters, startImport, getJob as getImportJob } from 'service/importers'
+import { getSchedule } from 'service/scheduler'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -153,40 +154,7 @@ admin.post('/dedup/start', authMiddleware, adminMiddleware, async (c) => {
     /* empty body allowed */
   }
   const radiusM = Math.max(1, Math.min(1000, parseInt(body.radius) || 25))
-
-  const total = await dao.dedup.countActivePoints()
-  const id = randomUUID()
-  const job = new DedupJob(id, dao.dedup.streamPoints(), total, radiusM)
-  registry.add(job)
-
-  await dao.dedup.createJob(id, total, radiusM, user.id)
-
-  // Batched soft-delete to avoid 1 UPDATE per duplicate.
-  const removedBuf: number[] = []
-  const flushRemoved = async () => {
-    if (!removedBuf.length) return
-    const ids = removedBuf.splice(0, removedBuf.length)
-    await dao.dedup.markRemoved(id, ids)
-  }
-
-  // Fire and forget — progress is observed via SSE.
-  ;(async () => {
-    try {
-      await job.run({
-        chunkSize: 5_000,
-        onRemoved: (pid) => {
-          removedBuf.push(pid)
-          if (removedBuf.length >= 5_000) return flushRemoved()
-        },
-      })
-      await flushRemoved()
-    } catch (e) {
-      console.error('Dedup job failed', e)
-    } finally {
-      await dao.dedup.updateJob(id, job.state, job.processed, job.duplicates, job.kept, job.error ?? null)
-    }
-  })()
-
+  const { id, total } = await startDedup(radiusM, user.id)
   return c.json({ id, total, radius: radiusM })
 })
 
@@ -577,6 +545,12 @@ admin.delete('/pinterest/:id', authMiddleware, adminMiddleware, async (c) => {
  * @description Standalone importers (Commons, Wikidata, Flickr) with their running / last job
  */
 admin.get('/importers', authMiddleware, adminMiddleware, (c) => c.json(listImporters()))
+
+/**
+ * GET /admin/schedule
+ * @description Next random run of each daily task (Pinterest, importers, dedup) and its last result
+ */
+admin.get('/schedule', authMiddleware, adminMiddleware, (c) => c.json(getSchedule()))
 
 /**
  * POST /admin/importers/:key/run

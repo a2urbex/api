@@ -11,6 +11,10 @@
  * Memory: O(n).
  */
 
+import { randomUUID } from 'crypto'
+import dao from 'dao'
+import { notify } from './notify'
+
 const EARTH_RADIUS_M = 6_371_000
 const DEG_PER_M_LAT = 1 / 111_320
 
@@ -206,6 +210,58 @@ class JobRegistry {
   remove(id: string) {
     this.jobs.delete(id)
   }
+  running() {
+    return [...this.jobs.values()].some((j) => j.state === 'running')
+  }
 }
 
 export const registry = new JobRegistry()
+
+/**
+ * Starts a dedup run (admin button or nightly schedule). Progress via registry/SSE;
+ * a report goes to admins on the admin_system channel when it ends.
+ */
+export const startDedup = async (radiusM: number, userId: number | null) => {
+  const total = await dao.dedup.countActivePoints()
+  const id = randomUUID()
+  const job = new DedupJob(id, dao.dedup.streamPoints(), total, radiusM)
+  registry.add(job)
+  await dao.dedup.createJob(id, total, radiusM, userId as any)
+
+  // Batched soft-delete to avoid 1 UPDATE per duplicate.
+  const removedBuf: number[] = []
+  const flushRemoved = async () => {
+    if (!removedBuf.length) return
+    const ids = removedBuf.splice(0, removedBuf.length)
+    await dao.dedup.markRemoved(id, ids)
+  }
+
+  // Fire and forget — progress is observed via SSE.
+  ;(async () => {
+    try {
+      await job.run({
+        chunkSize: 5_000,
+        onRemoved: (pid) => {
+          removedBuf.push(pid)
+          if (removedBuf.length >= 5_000) return flushRemoved()
+        },
+      })
+      await flushRemoved()
+    } catch (e) {
+      console.error('Dedup job failed', e)
+    } finally {
+      await dao.dedup.updateJob(id, job.state, job.processed, job.duplicates, job.kept, job.error ?? null)
+      await notify('admin_system', {
+        title: job.state === 'error' ? 'Dedup failed' : `Dedup ${job.state}`,
+        body: job.error
+          ? job.error.slice(0, 180)
+          : `${job.duplicates} duplicates removed · ${job.kept} kept · ${job.processed} points checked (${radiusM} m)`,
+        url: '/admin/dedup',
+      })
+    }
+  })()
+
+  return { id, total, job }
+}
+
+export const isDedupRunning = () => registry.running()
