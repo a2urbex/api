@@ -12,6 +12,7 @@ import importService from 'service/import'
 import geocoderService from 'service/geocoder'
 import pinterestService, { PinterestJob, registry as pinterestRegistry } from 'service/pinterest'
 import { notify, reportImport, CHANNELS, Channel } from 'service/notify'
+import { listImporters, startImport, getJob as getImportJob } from 'service/importers'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -571,6 +572,75 @@ admin.delete('/pinterest/:id', authMiddleware, adminMiddleware, async (c) => {
  * body @param {string} body - Optional
  * body @param {string} url - Optional, relative app path
  */
+/**
+ * GET /admin/importers
+ * @description Standalone importers (Commons, Wikidata, Flickr) with their running / last job
+ */
+admin.get('/importers', authMiddleware, adminMiddleware, (c) => c.json(listImporters()))
+
+/**
+ * POST /admin/importers/:key/run
+ * body @param {boolean} dryRun - count only, nothing written
+ * body @param {number} limit - Optional - max points to import
+ * body @param {object} args - Optional - importer options (country, category, tags, since)
+ *
+ * @returns {{id: string}} job id, progress on /admin/importers/jobs/:id/stream
+ */
+admin.post('/importers/:key/run', authMiddleware, adminMiddleware, async (c) => {
+  const { dryRun, limit, args } = await c.req.json()
+  const lim = Number(limit) > 0 ? Math.min(Number(limit), 100000) : null
+  try {
+    const job = startImport(c.req.param('key'), !!dryRun, lim, args && typeof args === 'object' ? args : {})
+    return c.json({ id: job.id })
+  } catch (e: any) {
+    throw new HTTPException(409, { message: e.message })
+  }
+})
+
+/**
+ * POST /admin/importers/jobs/:id/stop
+ */
+admin.post('/importers/jobs/:id/stop', authMiddleware, adminMiddleware, (c) => {
+  const job = getImportJob(c.req.param('id'))
+  if (!job) throw new HTTPException(404, { message: 'Job not found' })
+  if (job.state === 'running') job.aborted = true
+  return c.json({})
+})
+
+/**
+ * GET /admin/importers/jobs/:id/stream?token=JWT
+ * @description SSE: 'log' lines and 'stats' snapshots until the job ends
+ */
+admin.get('/importers/jobs/:id/stream', authQueryMiddleware, adminMiddleware, (c) => {
+  const job = getImportJob(c.req.param('id'))
+  if (!job) throw new HTTPException(404, { message: 'Job not found' })
+
+  return streamSSE(c, async (stream) => {
+    let unsubStats = () => {}
+    let unsubLogs = () => {}
+    let done = () => {}
+    stream.onAbort(() => {
+      unsubStats()
+      unsubLogs()
+      done()
+    })
+    // writes are chained so the final 'Done' log and stats are flushed before the stream closes
+    let queue: Promise<unknown> = Promise.resolve()
+    const send = (event: string, data: string) => (queue = queue.then(() => stream.writeSSE({ event, data })).catch(() => {}))
+    await new Promise<void>((resolve) => {
+      done = resolve
+      unsubLogs = job.subscribeLogs((line) => send('log', line)) as any
+      unsubStats = job.subscribe((s) => {
+        send('stats', JSON.stringify(s))
+        if (s.state !== 'running') queue.then(() => resolve())
+      }) as any
+    })
+    await queue
+    unsubStats()
+    unsubLogs()
+  })
+})
+
 /**
  * GET /admin/notify/users
  * @description Users with at least one device subscribed to push
