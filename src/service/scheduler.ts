@@ -1,6 +1,6 @@
 // Daily automatic runs at random times:
-// - day (07:00-19:00): Pinterest, Wikidata, Wikimedia Commons, Flickr — each at its own random minute
-// - evening (21:00-23:30): dedup, always after the imports (waits if one is still running)
+// - day (07:00-15:00): Pinterest, Wikidata, Wikimedia Commons, Flickr — each at its own random minute
+// - late afternoon (16:30-18:30): dedup, always after the imports (waits if one is still running)
 // Times are drawn again every day. Reports go to admins only (admin_system channel).
 import { randomUUID } from 'crypto'
 
@@ -11,8 +11,8 @@ import { startDedup, isDedupRunning } from 'service/dedup'
 
 type Task = { key: string; label: string; window: [number, number]; run: () => Promise<void> }
 
-const DAY_WINDOW: [number, number] = [7, 19]
-const EVENING_WINDOW: [number, number] = [21, 23.5]
+const DAY_WINDOW: [number, number] = [7, 15]
+const EVENING_WINDOW: [number, number] = [16.5, 18.5]
 const DEDUP_RADIUS_M = 25
 
 const plan = new Map<string, { label: string; at: number; last?: { at: number; result: string } }>()
