@@ -123,7 +123,7 @@ let running = false
 
 /** Shape of a pin item returned by the Pinterest BoardFeedResource API. */
 interface PinItem {
-  id: number
+  id: number | string
   type: string
   title?: string
   description?: string
@@ -131,6 +131,39 @@ interface PinItem {
   images?: {
     orig?: { url: string }
   }
+}
+
+/**
+ * Pinterest now returns opaque ids ("e1_…") in some responses. The pid column and the ~6k pins
+ * already imported use the numeric pin id, so we look for it in the usual places.
+ * Ids are kept as digit strings (18-19 digits do not fit a JS number).
+ */
+let unknownIdLogged = false
+const resolvePinId = (item: any, job?: { log: (l: string) => void }): { pid: string; numeric: boolean } => {
+  const digits = (v: any) => (v != null && /^\d{5,}$/.test(String(v)) ? String(v) : null)
+  const direct = digits(item?.id) || digits(item?.entity_id) || digits(item?.pin_id)
+  if (direct) return { pid: direct, numeric: true }
+
+  // node_id = base64("Pin:<id>")
+  if (typeof item?.node_id === 'string') {
+    try {
+      const m = Buffer.from(item.node_id, 'base64').toString('utf8').match(/^Pin:(\d+)$/)
+      if (m) return { pid: m[1], numeric: true }
+    } catch {}
+  }
+
+  // a /pin/<id>/ link anywhere in the pin
+  const m = JSON.stringify(item ?? {}).match(/\/pin\/(\d{9,})/)
+  if (m) return { pid: m[1], numeric: true }
+
+  // last resort: stable 63-bit fingerprint of the opaque id (dedup still works run to run)
+  let h = BigInt("0xcbf29ce484222325")
+  for (const ch of String(item?.id ?? '')) h = ((h ^ BigInt(ch.charCodeAt(0))) * BigInt("0x100000001b3")) & BigInt("0x7fffffffffffffff")
+  if (!unknownIdLogged && job) {
+    unknownIdLogged = true
+    job.log(`Pin id "${item?.id}" is not numeric and no numeric id was found; using a fingerprint. Fields: ${Object.keys(item ?? {}).join(', ')}`)
+  }
+  return { pid: h.toString(), numeric: false }
 }
 
 /** Session cookies extracted from Selenium after login. */
@@ -521,9 +554,10 @@ const pinterestService = {
    */
   savePin: async (item: PinItem, job: PinterestJob): Promise<void> => {
     const SOURCE = job.source
+    const { pid, numeric } = resolvePinId(item, job)
 
     try {
-      const exists = await dao.location.getByPid(item.id, SOURCE)
+      const exists = await dao.location.getByPid(pid as any, SOURCE)
       if (exists) {
         job.skipped++
         return
@@ -531,7 +565,7 @@ const pinterestService = {
 
       const imgUrl = item?.images?.orig?.url
       if (!imgUrl) {
-        job.log(`Pin ${item.id} has no image URL, skipping.`)
+        job.log(`Pin ${pid} has no image URL, skipping.`)
         job.skipped++
         return
       }
@@ -581,7 +615,7 @@ const pinterestService = {
       if (lat && lon && (await dao.location.findInvalidNear(lat, lon))) {
         fs.unlinkSync(imgDest)
         job.skipped++
-        job.log(`Pin ${item.id} matches an invalid point, skipping.`)
+        job.log(`Pin ${pid} matches an invalid point, skipping.`)
         return
       }
 
@@ -589,9 +623,9 @@ const pinterestService = {
       const category: any = name ? categoryService.getCategory(name) : null
 
       await dao.location.addPinterest(
-        item.id,
+        pid as any,
         SOURCE,
-        `${config.pinterest.url}/pin/${item.id}`,
+        numeric ? `${config.pinterest.url}/pin/${pid}` : `${config.pinterest.url}${config.pinterest.boardUrl}`,
         lat,
         lon,
         name,
@@ -602,10 +636,10 @@ const pinterestService = {
       )
 
       job.inserted++
-      job.log(`Imported pin ${item.id}${name ? ` — ${name}` : ''}`)
+      job.log(`Imported pin ${pid}${name ? ` — ${name}` : ''}`)
     } catch (error) {
       const msg = error instanceof Error ? error.message : String(error)
-      job.log(`Failed pin ${item.id}: ${msg}`)
+      job.log(`Failed pin ${pid}: ${msg}`)
       job.failed++
     }
   },
