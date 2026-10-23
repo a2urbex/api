@@ -316,6 +316,67 @@ const pinterestService = {
   },
 
   /**
+   * Calls /resource/BoardFeedResource/get/ from inside the logged-in page.
+   * Board id comes from PINTEREST_BOARD_ID, otherwise it is read from the board page HTML.
+   * @returns the raw resource JSON, or null when the call fails (caller falls back to interception)
+   */
+  fetchBoardPage: async (cookies: PinterestCookies, job: PinterestJob, bookmarks?: string[]): Promise<any | null> => {
+    const driver = cookies.driver as any
+    try {
+      let boardId = config.pinterest.boardId
+      if (!boardId) {
+        boardId = (await driver.executeScript(`
+          const html = document.documentElement.innerHTML
+          const m = html.match(/"board_id":"(\\d+)"/) || html.match(/"board":\\{"id":"(\\d+)"/)
+          return m ? m[1] : null
+        `)) as string
+      }
+      if (!boardId) {
+        job.log('Direct fetch skipped: board id not found (set PINTEREST_BOARD_ID).')
+        return null
+      }
+
+      await driver.manage().setTimeouts({ script: 45000 })
+      const res = (await driver.executeAsyncScript(
+        `
+        const [boardId, sourceUrl, bookmarks, done] = arguments
+        const options = { board_id: boardId, board_url: sourceUrl, page_size: 25, field_set_key: 'react_grid_pin',
+          filter_section_pins: false, sort: 'default', layout: 'default', redux_normalize_feed: true }
+        if (bookmarks) options.bookmarks = bookmarks
+        const url = '/resource/BoardFeedResource/get/?source_url=' + encodeURIComponent(sourceUrl)
+          + '&data=' + encodeURIComponent(JSON.stringify({ options, context: {} })) + '&_=' + Date.now()
+        fetch(url, { credentials: 'include', headers: {
+          'Accept': 'application/json, text/javascript, */*; q=0.01',
+          'X-Requested-With': 'XMLHttpRequest',
+          'X-Pinterest-AppState': 'active',
+          'X-Pinterest-Source-Url': sourceUrl,
+          'X-Pinterest-PWS-Handler': 'www/[username]/[slug].js',
+        } })
+          .then((r) => r.text().then((body) => done({ status: r.status, body })))
+          .catch((e) => done({ status: 0, body: String(e) }))
+        `,
+        String(boardId),
+        config.pinterest.boardUrl,
+        bookmarks ?? null,
+      )) as { status: number; body: string }
+
+      if (res.status !== 200) {
+        job.log(`Direct fetch failed (HTTP ${res.status}), falling back to interception.`)
+        return null
+      }
+      const json = JSON.parse(res.body)
+      if (!Array.isArray(json?.resource_response?.data)) {
+        job.log('Direct fetch returned no pin list, falling back to interception.')
+        return null
+      }
+      return json
+    } catch (e) {
+      job.log(`Direct fetch error: ${e instanceof Error ? e.message : String(e)}`)
+      return null
+    }
+  },
+
+  /**
    * Fetches a page of pins from the Pinterest BoardFeedResource API.
    * Recursively follows bookmarks to paginate through the full board.
    * @param {PinterestCookies} cookies - Session cookies from the logged-in browser.
@@ -372,18 +433,26 @@ const pinterestService = {
 
       await cookies.driver.get(`https://fr.pinterest.com${config.pinterest.boardUrl}`)
       await cookies.driver.sleep(3000)
+    }
 
+    // 1) Direct call to BoardFeedResource from the logged-in page (same cookies / origin).
+    //    Pinterest no longer always fires this request itself while scrolling, so waiting for it is unreliable.
+    const direct = await pinterestService.fetchBoardPage(cookies, job, bookmarks)
+    if (direct) {
+      job.log(`Fetched Pinterest page — ${direct?.resource_response?.data?.length ?? 0} pins`)
+      await pinterestService.parseFeed(direct, cookies, job)
+      return
+    }
+
+    // 2) Fallback: legacy scroll + interception
+    if (!bookmarks) {
       const interceptReady = await cookies.driver.executeScript(
         `return typeof window.__pinterestResponses !== 'undefined'`,
       )
       console.log('Intercept script active:', interceptReady)
-
-      await cookies.driver.executeScript(`window.scrollTo(0, document.body.scrollHeight)`)
-      await cookies.driver.sleep(3000)
-    } else {
-      await cookies.driver.executeScript(`window.scrollTo(0, document.body.scrollHeight)`)
-      await cookies.driver.sleep(3000)
     }
+    await cookies.driver.executeScript(`window.scrollTo(0, document.body.scrollHeight)`)
+    await cookies.driver.sleep(3000)
 
     // Poll for intercepted responses
     let intercepted: any = null
