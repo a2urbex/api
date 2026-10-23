@@ -80,6 +80,8 @@ INSERT IGNORE INTO notification_channel (channel, label, critical, admin_only) V
   ('admin_system', 'System reports', 1, 1),
   ('users_news', 'New spots', 0, 0),
   ('outings', 'Outings', 0, 0);
+-- "New spots" is admin-only (re-run safe)
+UPDATE notification_channel SET admin_only = 1 WHERE channel = 'users_news';
 
 CREATE TABLE IF NOT EXISTS user_notification_pref (
   user_id INT NOT NULL,

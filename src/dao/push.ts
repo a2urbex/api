@@ -27,6 +27,13 @@ const push = {
     return db.query(sql, [userIds])
   },
 
+  getSubscribedUsers: () => {
+    const sql = `SELECT u.id, u.username, u.image, COUNT(ps.id) devices
+                 FROM push_subscription ps JOIN user u ON u.id = ps.user_id
+                 GROUP BY u.id ORDER BY u.username`
+    return db.query(sql)
+  },
+
   getActiveUsers: () => {
     const sql = `SELECT id, roles FROM user WHERE pending = 0`
     return db.query(sql)

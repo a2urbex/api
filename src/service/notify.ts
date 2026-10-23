@@ -8,7 +8,7 @@ export type Channel = 'admin_system' | 'users_news' | 'outings'
 // critical = cannot be opted out; roles = who gets it by default (null = every approved user)
 export const CHANNELS: Record<Channel, { label: string; critical: boolean; adminOnly: boolean }> = {
   admin_system: { label: 'System reports', critical: true, adminOnly: true },
-  users_news: { label: 'New spots', critical: false, adminOnly: false },
+  users_news: { label: 'New spots', critical: false, adminOnly: true },
   outings: { label: 'Outings', critical: false, adminOnly: false },
 }
 

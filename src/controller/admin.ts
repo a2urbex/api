@@ -565,24 +565,47 @@ admin.delete('/pinterest/:id', authMiddleware, adminMiddleware, async (c) => {
  * @description Send a push notification to a channel
  *
  * body @param {string} channel - admin_system | users_news | outings
- * body @param {'all'|'admins'} audience
+ * body @param {'all'|'admins'|'user'} audience
+ * body @param {string} userId - Encoded user id, when audience is 'user'
  * body @param {string} title
  * body @param {string} body - Optional
  * body @param {string} url - Optional, relative app path
  */
+/**
+ * GET /admin/notify/users
+ * @description Users with at least one device subscribed to push
+ *
+ * @returns {{id: string, username: string, image: string, devices: number}[]}
+ */
+admin.get('/notify/users', authMiddleware, adminMiddleware, async (c) => {
+  const rows = await dao.push.getSubscribedUsers()
+  return c.json(
+    rows.map((u: any) => ({
+      id: utils.encrypt(u.id.toString(), 'user'),
+      username: u.username,
+      image: utils.getImageUrl(u.image),
+      devices: Number(u.devices),
+    })),
+  )
+})
+
 admin.post('/notify', authMiddleware, adminMiddleware, async (c) => {
-  const { channel, audience, title, body, url } = await c.req.json()
+  const { channel, audience, title, body, url, userId } = await c.req.json()
   if (!CHANNELS[channel as Channel]) throw new HTTPException(400, { message: 'Unknown channel' })
   if (typeof title !== 'string' || !title.trim()) throw new HTTPException(400, { message: 'Title required' })
 
   let userIds: number[] | undefined
-  if (audience === 'admins') {
+  // A specific user: sent to all their devices, whatever their channel preferences
+  const target = audience === 'user' && userId ? parseInt(utils.decrypt(userId, 'user')) : null
+  if (audience === 'user' && !target) throw new HTTPException(400, { message: 'Pick a user' })
+  if (target) userIds = [target]
+  else if (audience === 'admins') {
     const users = await dao.push.getActiveUsers()
     userIds = users.filter((u: any) => String(u.roles).includes('ROLE_ADMIN')).map((u: any) => u.id)
   }
 
   const safeUrl = typeof url === 'string' && url.startsWith('/') ? url : '/'
-  const res = await notify(channel, { title: title.slice(0, 120), body: String(body || '').slice(0, 300), url: safeUrl }, userIds)
+  const res = await notify(channel, { title: title.slice(0, 120), body: String(body || '').slice(0, 300), url: safeUrl }, userIds, !!target)
   return c.json(res)
 })
 
