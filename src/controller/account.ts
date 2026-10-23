@@ -8,6 +8,7 @@ import config from 'config'
 
 import { authMiddleware, getUser } from 'service/middleware'
 import geocoderService from 'service/geocoder'
+import { countryFromIp } from 'service/ipCountry'
 
 const account = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -132,7 +133,7 @@ account.put('/', async (c) => {
 
 /**
  * GET /account/country
- * @description Resolve the default country: account setting > detected (lat/lon, then Accept-Language) > FR
+ * @description Resolve the default country: account setting > GPS (lat/lon) > IP > Accept-Language > FR
  *
  * query @param {number} lat - Optional - only sent when the browser already granted geolocation
  * query @param {number} lon - Optional
@@ -155,6 +156,11 @@ account.get('/country', async (c) => {
       const found = await geocoderService.getCountry(lat, lon)
       if (found) [code, countryId, source] = [found.code, found.id, 'geolocation']
     }
+  }
+
+  if (!code) {
+    const fromIp = await countryFromIp(c)
+    if (fromIp) [code, source] = [fromIp, 'ip']
   }
 
   if (!code) {
