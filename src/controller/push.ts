@@ -5,7 +5,7 @@ import config from 'config'
 import dao from 'dao'
 import utils from '@core/utils'
 import { authMiddleware } from 'service/middleware'
-import { CHANNELS, Channel, notify } from 'service/notify'
+import { CHANNELS, Channel, notify, canReceive } from 'service/notify'
 
 const push = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -49,11 +49,11 @@ push.delete('/subscribe', async (c) => {
 push.get('/preferences', async (c) => {
   const user = c.get('user')
   const prefs = new Map((await dao.push.getPrefs(user.id)).map((p: any) => [p.channel, !!p.enabled]))
-  const isAdmin = utils.isAdmin(user)
+  const roles = user.roles || []
 
   const list = (Object.keys(CHANNELS) as Channel[])
-    .filter((ch) => !CHANNELS[ch].adminOnly || isAdmin)
-    .map((ch) => ({ channel: ch, label: CHANNELS[ch].label, critical: CHANNELS[ch].critical, enabled: CHANNELS[ch].critical || (prefs.get(ch) ?? true) }))
+    .filter((ch) => canReceive(ch, roles))
+    .map((ch) => ({ channel: ch, label: CHANNELS[ch].label, critical: CHANNELS[ch].critical, enabled: CHANNELS[ch].critical || (prefs.get(ch) ?? CHANNELS[ch].defaultOn(roles)) }))
   return c.json(list)
 })
 
@@ -66,7 +66,7 @@ push.put('/preferences', async (c) => {
   const user = c.get('user')
   const { channel, enabled } = await c.req.json()
   const ch = CHANNELS[channel as Channel]
-  if (!ch || ch.critical) throw new HTTPException(400, { message: 'Channel cannot be changed' })
+  if (!ch || ch.critical || !canReceive(channel as Channel, user.roles || [])) throw new HTTPException(400, { message: 'Channel cannot be changed' })
 
   await dao.push.setPref(user.id, channel, !!enabled)
   return c.json({})

@@ -39,6 +39,11 @@ const push = {
     return db.query(sql)
   },
 
+  getChannelPrefs: (channel: string) => {
+    const sql = `SELECT user_id, enabled FROM user_notification_pref WHERE channel = ?`
+    return db.query(sql, [channel])
+  },
+
   getOptOuts: (channel: string) => {
     const sql = `SELECT user_id FROM user_notification_pref WHERE channel = ? AND enabled = 0`
     return db.query(sql, [channel])

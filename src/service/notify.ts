@@ -6,10 +6,22 @@ import dao from 'dao'
 export type Channel = 'admin_system' | 'users_news' | 'outings'
 
 // critical = cannot be opted out; roles = who gets it by default (null = every approved user)
-export const CHANNELS: Record<Channel, { label: string; critical: boolean; adminOnly: boolean }> = {
-  admin_system: { label: 'System reports', critical: true, adminOnly: true },
-  users_news: { label: 'New spots', critical: false, adminOnly: true },
-  outings: { label: 'Outings', critical: false, adminOnly: false },
+// audience: admin = admins only · staff = admins + superusers (they see every point) · all = every approved user
+// defaultOn: state before the user touches the toggle (critical channels cannot be turned off)
+type Audience = 'admin' | 'staff' | 'all'
+export const CHANNELS: Record<Channel, { label: string; critical: boolean; audience: Audience; defaultOn: (roles: string[]) => boolean }> = {
+  admin_system: { label: 'System reports', critical: true, audience: 'admin', defaultOn: () => true },
+  // new spots: on for admins, opt-in for superusers
+  users_news: { label: 'New spots', critical: false, audience: 'staff', defaultOn: (roles) => roles.includes('ROLE_ADMIN') },
+  outings: { label: 'Outings', critical: false, audience: 'all', defaultOn: () => true },
+}
+
+export const canReceive = (channel: Channel, roles: string[]) => {
+  if (roles.includes('ROLE_DEMO')) return false
+  const a = CHANNELS[channel].audience
+  if (a === 'admin') return roles.includes('ROLE_ADMIN')
+  if (a === 'staff') return roles.includes('ROLE_ADMIN') || roles.includes('ROLE_SUPERUSER')
+  return true
 }
 
 export interface NotifyPayload {
@@ -32,14 +44,18 @@ const parseRoles = (roles: any): string[] => {
 
 const recipients = async (channel: Channel, userIds?: number[], force = false) => {
   if (force && userIds) return userIds
+  const ch = CHANNELS[channel]
   const users = await dao.push.getActiveUsers()
-  const optOut = new Set(CHANNELS[channel].critical ? [] : (await dao.push.getOptOuts(channel)).map((r: any) => r.user_id))
+  // explicit choices (on/off); otherwise the role default applies
+  const prefs = new Map<number, boolean>((await dao.push.getChannelPrefs(channel)).map((r: any) => [r.user_id, !!r.enabled]))
 
   return users
     .filter((u: any) => !userIds || userIds.includes(u.id))
-    .filter((u: any) => !CHANNELS[channel].adminOnly || parseRoles(u.roles).includes('ROLE_ADMIN'))
-    .filter((u: any) => !parseRoles(u.roles).includes('ROLE_DEMO'))
-    .filter((u: any) => !optOut.has(u.id))
+    .filter((u: any) => {
+      const roles = parseRoles(u.roles)
+      if (!canReceive(channel, roles)) return false
+      return ch.critical || (prefs.get(u.id) ?? ch.defaultOn(roles))
+    })
     .map((u: any) => u.id as number)
 }
 
