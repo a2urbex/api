@@ -90,6 +90,12 @@ CREATE TABLE IF NOT EXISTS user_notification_pref (
   PRIMARY KEY (user_id, channel)
 ) DEFAULT CHARSET=utf8mb4;
 
+-- Importers (Wikimedia Commons, Wikidata, Flickr): original image, credit and licence; idempotency key (source, pid)
+CALL a2_add_column('location', 'image_url', 'VARCHAR(512) NULL');
+CALL a2_add_column('location', 'image_credit', 'VARCHAR(255) NULL');
+CALL a2_add_column('location', 'image_license', 'VARCHAR(64) NULL');
+CALL a2_add_index('location', 'ix_location_source_pid', '`source`(100), `pid`');
+
 -- Phase 2: zone drawing (bbox prefilter) + import date slider
 CALL a2_add_index('location', 'ix_location_lat_lon', '`lat`, `lon`');
 CALL a2_add_index('location', 'ix_location_date_add', '`date_add`, `lat`, `lon`');

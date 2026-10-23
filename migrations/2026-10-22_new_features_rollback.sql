@@ -21,6 +21,7 @@ BEGIN
 END //
 DELIMITER ;
 
+CALL a2_drop_index('location', 'ix_location_source_pid');
 CALL a2_drop_index('location', 'ix_location_date_add');
 CALL a2_drop_index('location', 'ix_location_lat_lon');
 CALL a2_drop_index('location', 'ix_location_status');
@@ -31,6 +32,9 @@ DROP TABLE IF EXISTS push_subscription;
 DROP TABLE IF EXISTS exploration_session;
 DROP TABLE IF EXISTS location_visit;
 
+CALL a2_drop_column('location', 'image_license');
+CALL a2_drop_column('location', 'image_credit');
+CALL a2_drop_column('location', 'image_url');
 CALL a2_drop_column('favorite', 'status');
 CALL a2_drop_column('user', 'default_country');
 CALL a2_drop_column('location', 'visited_at');

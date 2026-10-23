@@ -19,6 +19,7 @@ export default {
     salt: process.env.PASSWORD_SALT ? parseInt(process.env.PASSWORD_SALT) : 10,
   },
   jwtSecret: process.env.JWT_SECRET as string,
+  flickrApiKey: process.env.FLICKR_API_KEY || '',
   vapid: {
     publicKey: process.env.VAPID_PUBLIC_KEY || '',
     privateKey: process.env.VAPID_PRIVATE_KEY || '',

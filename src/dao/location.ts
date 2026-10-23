@@ -266,6 +266,34 @@ const location = {
     return db.query(sql, [lat - deltaDeg, lat + deltaDeg, lon - deltaDeg, lon + deltaDeg], 0)
   },
 
+  // Any point (any source) within ~40 m: one point per place, not one per photo
+  findNear: (lat: number, lon: number, deltaDeg: number = 0.00036) => {
+    const sql = `SELECT id FROM location
+                 WHERE lat BETWEEN ? AND ? AND lon BETWEEN ? AND ? AND dedup_removed_at IS NULL
+                 LIMIT 1`
+    return db.query(sql, [lat - deltaDeg, lat + deltaDeg, lon - deltaDeg, lon + deltaDeg], 0)
+  },
+
+  addImported: (r: {
+    pid: number
+    source: string
+    url: string
+    lat: number
+    lon: number
+    name: string
+    description: string | null
+    image: string
+    imageUrl: string
+    credit: string | null
+    license: string | null
+    countryId: number | null
+    categoryId: number | null
+  }) => {
+    const sql = `INSERT INTO location (pid, source, url, lat, lon, name, description, image, image_url, image_credit, image_license, country_id, category_id, date_add)
+                 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())`
+    return db.query(sql, [r.pid, r.source, r.url.slice(0, 255), r.lat, r.lon, r.name.slice(0, 250), r.description, r.image, r.imageUrl.slice(0, 512), r.credit?.slice(0, 255) ?? null, r.license?.slice(0, 64) ?? null, r.countryId, r.categoryId])
+  },
+
   getByPid: (pid: number, source: string) => {
     const sql = `SELECT id FROM location WHERE pid = ? AND source = ?`
     return db.query(sql, [pid, source], 0)

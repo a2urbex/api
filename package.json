@@ -1,7 +1,10 @@
 {
   "scripts": {
     "dev": "bun run --watch src/index.ts",
-    "prod": "bun run src/index.ts"
+    "prod": "bun run src/index.ts",
+    "import:commons": "bun run src/importers/commons.ts",
+    "import:wikidata": "bun run src/importers/wikidata.ts",
+    "import:flickr": "bun run src/importers/flickr.ts"
   },
   "dependencies": {
     "bcrypt": "^5.1.1",
