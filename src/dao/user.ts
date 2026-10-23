@@ -46,6 +46,11 @@ const user = {
     return db.query(sql, [username], 0)
   },
 
+  getRoles: (id: number) => {
+    const sql = `SELECT roles FROM user WHERE id = ?`
+    return db.query(sql, [id], 0)
+  },
+
   updateRoles: (id: number, roles: string[]) => {
     const sql = `UPDATE user SET roles = ? WHERE id = ?`
     return db.query(sql, [JSON.stringify(roles), id])

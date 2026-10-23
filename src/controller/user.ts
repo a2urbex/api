@@ -2,6 +2,7 @@ import { Hono } from 'hono'
 import { HTTPException } from 'hono/http-exception'
 
 import dao from 'dao'
+import { invalidateRoles } from 'service/roles'
 import utils from '@core/utils'
 import config from 'config'
 import userService from 'service/user'
@@ -39,6 +40,7 @@ user.put('/:id/roles', async (c) => {
   }
 
   await dao.user.updateRoles(userId, roles)
+  invalidateRoles(userId)
   return c.json({ message: 'User roles updated successfully' })
 })
 
@@ -61,6 +63,7 @@ user.put('/:id/approve', async (c) => {
   if (!target) throw new HTTPException(404, { message: 'User not found' })
 
   await dao.user.updateRoles(userId, roles)
+  invalidateRoles(userId)
   await dao.user.updatePending(userId, 0)
   await mailService.accessGranted(target.email, target.username, config.frontUrl)
 

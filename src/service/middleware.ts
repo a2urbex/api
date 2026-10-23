@@ -6,10 +6,12 @@ import jwt from 'jsonwebtoken'
 import config from 'config'
 import utils from '@core/utils'
 import dao from 'dao'
+import { currentRoles } from 'service/roles'
 
 // AUTH
 const authMiddleware = createMiddleware(async (c, next) => {
-  const user = getUser(c, true)
+  const user: any = getUser(c, true)
+  user.roles = await currentRoles(user.id)
   c.set('user', user)
 
   return next()
@@ -82,6 +84,8 @@ const authQueryMiddleware = createMiddleware(async (c, next) => {
   } catch (e) {
     throw new HTTPException(401, { message: 'Invalid token' })
   }
+  const user: any = c.get('user')
+  user.roles = await currentRoles(user.id)
   return next()
 })
 
