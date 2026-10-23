@@ -17,6 +17,8 @@ import favorite from 'controller/favorite'
 import friend from 'controller/friend'
 import user from 'controller/user'
 import admin from 'controller/admin'
+import exploration from 'controller/exploration'
+import push from 'controller/push'
 import pinterestService, { PinterestJob, registry as pinterestRegistry } from 'service/pinterest'
 
 await start()
@@ -52,6 +54,8 @@ app.route('/favorite', favorite)
 app.route('/friend', friend)
 app.route('/users', user)
 app.route('/admin', admin)
+app.route('/exploration', exploration)
+app.route('/push', push)
 
 // Scheduled Pinterest import. The cron is always registered; execution is gated
 // on the admin-managed settings read fresh on every tick, so toggling on/off

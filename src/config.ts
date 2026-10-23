@@ -19,6 +19,11 @@ export default {
     salt: process.env.PASSWORD_SALT ? parseInt(process.env.PASSWORD_SALT) : 10,
   },
   jwtSecret: process.env.JWT_SECRET as string,
+  vapid: {
+    publicKey: process.env.VAPID_PUBLIC_KEY || '',
+    privateKey: process.env.VAPID_PRIVATE_KEY || '',
+    subject: process.env.VAPID_SUBJECT || 'mailto:admin@a2urbex.com',
+  },
   pageSize: process.env.PAGE_SIZE ? parseInt(process.env.PAGE_SIZE) : 50,
   encryption: {
     method: process.env.ENCRYPT_METHOD,

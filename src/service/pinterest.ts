@@ -7,6 +7,7 @@ import path from 'path'
 import { randomUUID } from 'crypto'
 import geocoderService from './geocoder'
 import categoryService from './category'
+import { reportImport } from './notify'
 
 /** Default source name used when no source is configured in the admin settings. */
 const DEFAULT_SOURCE = 'Pinterest'
@@ -302,6 +303,7 @@ const pinterestService = {
       job.log(`ERROR: ${msg}`)
     } finally {
       running = false
+      reportImport(`Pinterest ${job.source}`, { inserted: job.inserted, skipped: job.skipped, failed: job.failed, error: job.error ?? null })
       if (cookies?.driver) {
         try {
           await cookies.driver.quit()
@@ -506,6 +508,13 @@ const pinterestService = {
       }
       name = item.title?.substring(0, 250) ?? name ?? null
       description = item.description?.substring(0, 250) ?? null
+
+      if (lat && lon && (await dao.location.findInvalidNear(lat, lon))) {
+        fs.unlinkSync(imgDest)
+        job.skipped++
+        job.log(`Pin ${item.id} matches an invalid point, skipping.`)
+        return
+      }
 
       const country = lat && lon ? await geocoderService.getCountry(lat, lon) : null
       const category: any = name ? categoryService.getCategory(name) : null

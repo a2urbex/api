@@ -11,6 +11,7 @@ import { DedupJob, registry } from 'service/dedup'
 import importService from 'service/import'
 import geocoderService from 'service/geocoder'
 import pinterestService, { PinterestJob, registry as pinterestRegistry } from 'service/pinterest'
+import { notify, reportImport, CHANNELS, Channel } from 'service/notify'
 
 const admin = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 
@@ -331,6 +332,10 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
         }
         continue
       }
+      if (await dao.location.findInvalidNear(p.lat, p.lon)) {
+        skipped++
+        continue
+      }
 
       const country = await geocoderService.getCountry(p.lat, p.lon).catch(() => null)
       const localImage = p.imageUrl ? await utils.downloadImage(p.imageUrl, config.path.location) : null
@@ -349,6 +354,7 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
     }
 
     await dao.importJob.finish(jobId, 'finished', placemarks.length, inserted, skipped, updated, favoriteId, null)
+    reportImport(`KML ${filename}`, { inserted, skipped, updated })
 
     return c.json({
       id: jobId,
@@ -361,6 +367,7 @@ admin.post('/imports', authMiddleware, adminMiddleware, async (c) => {
   } catch (e: any) {
     const msg = e?.message || String(e)
     await dao.importJob.finish(jobId, 'error', 0, inserted, skipped, updated, favoriteId, msg)
+    reportImport(`KML ${filename}`, { inserted, skipped, updated, error: msg })
     throw new HTTPException(500, { message: `Import failed: ${msg}` })
   }
 })
@@ -551,6 +558,32 @@ admin.get('/pinterest/:id', authMiddleware, adminMiddleware, (c) => {
 admin.delete('/pinterest/:id', authMiddleware, adminMiddleware, async (c) => {
   await dao.pinterest.deleteJob(c.req.param('id'))
   return c.json({ ok: true })
+})
+
+/**
+ * POST /admin/notify
+ * @description Send a push notification to a channel
+ *
+ * body @param {string} channel - admin_system | users_news | outings
+ * body @param {'all'|'admins'} audience
+ * body @param {string} title
+ * body @param {string} body - Optional
+ * body @param {string} url - Optional, relative app path
+ */
+admin.post('/notify', authMiddleware, adminMiddleware, async (c) => {
+  const { channel, audience, title, body, url } = await c.req.json()
+  if (!CHANNELS[channel as Channel]) throw new HTTPException(400, { message: 'Unknown channel' })
+  if (typeof title !== 'string' || !title.trim()) throw new HTTPException(400, { message: 'Title required' })
+
+  let userIds: number[] | undefined
+  if (audience === 'admins') {
+    const users = await dao.push.getActiveUsers()
+    userIds = users.filter((u: any) => String(u.roles).includes('ROLE_ADMIN')).map((u: any) => u.id)
+  }
+
+  const safeUrl = typeof url === 'string' && url.startsWith('/') ? url : '/'
+  const res = await notify(channel, { title: title.slice(0, 120), body: String(body || '').slice(0, 300), url: safeUrl }, userIds)
+  return c.json(res)
 })
 
 export default admin
