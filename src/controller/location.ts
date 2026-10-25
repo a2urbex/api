@@ -205,11 +205,13 @@ location.put('/:id', locationMiddleware, async (c) => {
 })
 
 const RATINGS = ['amazing', 'nice', 'meh', 'empty']
-const REASONS = ['walled', 'no_access', 'demolished', 'guarded', 'reused', 'not_found']
+// 'walled' n'est plus proposé mais reste accepté (anciens clients) ; 'bullshit' masque le point aussitôt
+const REASONS = ['bullshit', 'walled', 'no_access', 'demolished', 'guarded', 'reused', 'not_found']
 
 /**
  * POST /location/:id/visit
- * @description Field mode: record a visit status (never deletes the point)
+ * @description Field mode: record a visit status. Reason 'bullshit' also hides the point for everyone
+ * (soft delete via dedup_removed_at: recoverable, and it still blocks importers from recreating it)
  *
  * body @param {'valid'|'invalid'} status
  * body @param {string} rating - valid only
@@ -228,6 +230,11 @@ location.post('/:id/visit', async (c) => {
   await locationService.hasAccess(id, user)
   await dao.location.setStatus(id, status, r, why, !!danger)
   await dao.location.addVisit(id, user.id, status, r, why, !!danger)
+
+  if (why === 'bullshit') {
+    await dao.location.hide(id)
+    return c.json({ removed: true })
+  }
 
   const item = await dao.location.get(id, user.id)
   return c.json(item ? locationService.formatLocation(item) : {})

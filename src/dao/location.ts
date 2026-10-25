@@ -253,6 +253,11 @@ const location = {
     return db.query(sql, [status, rating, reason, danger ? 1 : 0, id])
   },
 
+  // Masque un point pour tout le monde (même mécanisme que la déduplication, récupérable)
+  hide: (id: number) => {
+    return db.query(`UPDATE location SET dedup_removed_at = NOW() WHERE id = ?`, [id])
+  },
+
   addVisit: (id: number, userId: number, status: string, rating: string | null, reason: string | null, danger: boolean) => {
     const sql = `INSERT INTO location_visit (location_id, user_id, status, rating, invalid_reason, danger) VALUES (?, ?, ?, ?, ?, ?)`
     return db.query(sql, [id, userId, status, rating, reason, danger ? 1 : 0])
