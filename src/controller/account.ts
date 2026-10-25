@@ -138,7 +138,7 @@ account.put('/', async (c) => {
  * query @param {number} lat - Optional - only sent when the browser already granted geolocation
  * query @param {number} lon - Optional
  *
- * @returns {{ setting: string|null, code: string, countryId: number|null, source: string, countries: {code: string, name: string}[] }}
+ * @returns {{ setting: string|null, code: string, countryId: number|null, source: string, bounds: [[number, number], [number, number]]|null, countries: {code: string, name: string}[] }}
  */
 account.get('/country', async (c) => {
   const user = c.get('user')
@@ -176,7 +176,7 @@ account.get('/country', async (c) => {
     countryId = countries.find((x: any) => x.code === 'FR')?.id ?? null
   }
 
-  return c.json({ setting, code, countryId, source, countries: countries.map((x: any) => ({ code: x.code, name: x.name })) })
+  return c.json({ setting, code, countryId, source, bounds: geocoderService.getBounds(code!), countries: countries.map((x: any) => ({ code: x.code, name: x.name })) })
 })
 
 /**
