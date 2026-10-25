@@ -106,11 +106,21 @@ export const reportImport = async (
   source: string,
   r: { inserted: number; skipped?: number; failed?: number; updated?: number; error?: string | null },
 ) => {
-  const parts = [`+${r.inserted} new`, r.updated ? `${r.updated} updated` : '', `${r.skipped ?? 0} skipped`, r.failed ? `${r.failed} failed` : '']
-  await notify('admin_system', {
-    title: r.error ? `Import ${source} failed` : `Import ${source} done`,
-    body: r.error ? r.error.slice(0, 180) : parts.filter(Boolean).join(' · '),
-    url: '/admin',
-  })
-  if (r.inserted > 0) await notify('users_news', { title: `${r.inserted} new spots`, body: `Added from ${source}`, url: '/locations' })
+  if (r.error) {
+    await notify('admin_system', { title: `Import ${source} failed`, body: r.error.slice(0, 180), url: '/admin' })
+    return
+  }
+  // nothing new: no notification at all
+  if (!r.inserted && !r.updated) return
+
+  // one notification per person: "new spots" for its subscribers, the detailed report only for admins who don't get it
+  const news = r.inserted > 0 ? await recipients('users_news') : []
+  if (news.length) {
+    await notify('users_news', { title: `${r.inserted} new spots`, body: `Added from ${source}${r.failed ? ` · ${r.failed} failed` : ''}`, url: '/locations' }, news)
+  }
+  const admins = (await recipients('admin_system')).filter((id) => !news.includes(id))
+  if (admins.length) {
+    const parts = [r.inserted ? `+${r.inserted} new` : '', r.updated ? `${r.updated} updated` : '', `${r.skipped ?? 0} skipped`, r.failed ? `${r.failed} failed` : '']
+    await notify('admin_system', { title: `Import ${source} done`, body: parts.filter(Boolean).join(' · '), url: '/admin' }, admins)
+  }
 }
