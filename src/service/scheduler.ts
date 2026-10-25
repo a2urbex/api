@@ -3,6 +3,7 @@
 // - late afternoon (16:30-18:30): dedup, always after the imports (waits if one is still running)
 // Times are drawn again every day. Reports go to admins only (admin_system channel).
 import { randomUUID } from 'crypto'
+import fs from 'fs'
 
 import dao from 'dao'
 import pinterestService, { PinterestJob, registry as pinterestRegistry } from 'service/pinterest'
@@ -19,6 +20,35 @@ const plan = new Map<string, { label: string; at: number; last?: { at: number; r
 const timers = new Map<string, ReturnType<typeof setTimeout>>()
 
 const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms))
+
+// Day of the last automatic run per task, persisted so an API restart (deploy) never runs a task twice the same day
+const STATE_FILE = `${process.cwd()}/.scheduler-state.json`
+const dayKey = (t: number) => {
+  const d = new Date(t)
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`
+}
+const readState = (): Record<string, { day: string; at: number; result: string }> => {
+  try {
+    return JSON.parse(fs.readFileSync(STATE_FILE, 'utf8'))
+  } catch {
+    return {}
+  }
+}
+const writeState = (key: string, at: number, result: string) => {
+  try {
+    const state = readState()
+    state[key] = { day: dayKey(at), at, result }
+    fs.writeFileSync(STATE_FILE, JSON.stringify(state, null, 2))
+  } catch (e) {
+    console.error('[scheduler] cannot write state', e)
+  }
+}
+const startOfTomorrow = (t: number) => {
+  const d = new Date(t)
+  d.setHours(0, 0, 0, 0)
+  d.setDate(d.getDate() + 1)
+  return d.getTime()
+}
 
 // Random time inside the window, today if still ahead, otherwise tomorrow
 const nextSlot = ([from, to]: [number, number], after = Date.now()) => {
@@ -78,10 +108,13 @@ const TASKS: Task[] = [
 ]
 
 const schedule = (task: Task, after = Date.now()) => {
+  // already ran today (even before a restart) => first slot tomorrow
+  const done = readState()[task.key]
+  if (done?.day === dayKey(Date.now())) after = Math.max(after, startOfTomorrow(Date.now()))
   // the dedup slot is always later than every import slot of the same day
   const at = nextSlot(task.window, after)
   const prev = plan.get(task.key)
-  plan.set(task.key, { label: task.label, at, last: prev?.last })
+  plan.set(task.key, { label: task.label, at, last: prev?.last ?? (done ? { at: done.at, result: done.result } : undefined) })
   clearTimeout(timers.get(task.key))
   timers.set(
     task.key,
@@ -95,7 +128,8 @@ const schedule = (task: Task, after = Date.now()) => {
       }
       console.log(`[scheduler] ${task.label}: ${result}`)
       plan.get(task.key)!.last = { at: Date.now(), result }
-      schedule(task, at + 3600_000) // next day's random slot
+      writeState(task.key, at, result)
+      schedule(task, startOfTomorrow(at)) // exactly once a day: next slot is tomorrow
     }, at - Date.now()),
   )
 }
