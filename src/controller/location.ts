@@ -108,6 +108,9 @@ location.post('/map', async (c) => {
   const user = c.get('user')
   const { string, categories, countries, sources, showInvalid, statuses, ratings, dateFrom, dateTo, zone } = await c.req.json()
 
+  // Garde-fou : jamais toute la base sur la carte. Sans pays ni zone dessinée, on ne renvoie rien.
+  if (!(Array.isArray(countries) && countries.length) && !zone) return c.json({ list: [], needsCountry: true })
+
   const filters = { string, categories, countries, sources, showInvalid, statuses, ratings, dateFrom, dateTo }
   const data = await locationService.getLocations(user, filters, false, locationService.parseZone(zone))
   return c.json(data)
