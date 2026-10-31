@@ -30,6 +30,8 @@ interface SearchFilters {
   page?: number
   favoriteId?: number
   showInvalid?: boolean
+  // statuts personnels visibles : 'all' (admin), [soi, amis] sinon ; absent = statut global seulement
+  statusScope?: number[] | 'all'
   bbox?: [number, number, number, number]
   statuses?: string[]
   ratings?: string[]

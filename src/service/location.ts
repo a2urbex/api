@@ -36,7 +36,18 @@ const inZone = (zone: Zone, lat: number, lon: number) => {
 }
 
 const locationService = {
+  /**
+   * Qui voit les statuts / notes personnels de qui : un admin voit tout ;
+   * un autre voit les siens et ceux de ses amis ; un visiteur, le statut global seulement.
+   */
+  statusScope: async (user: User | any): Promise<number[] | 'all'> => {
+    if (!user) return []
+    if (utils.isAdmin(user)) return 'all'
+    return [user.id, ...(await dao.friend.getUserFriends(user.id))]
+  },
+
   getLocations: async (user: User | any, filters: SearchFilters = {}, self: boolean = false, zone: Zone | null = null) => {
+    filters.statusScope = await locationService.statusScope(user)
     if (user) {
       if (self) {
         filters.users = [user.id]

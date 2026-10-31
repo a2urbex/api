@@ -7,6 +7,7 @@ import config from 'config'
 
 import { authMiddleware, getUser, locationMiddleware } from 'service/middleware'
 import locationService from 'service/location'
+import { currentRoles } from 'service/roles'
 import geocoderService from 'service/geocoder'
 
 const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
@@ -20,11 +21,13 @@ const location = new Hono<{ Bindings: Bindings; Variables: Variables }>()
  * @returns {Location}
  */
 location.get('/:id{[0-9a-z]{24,}}', async (c) => {
-  const user = getUser(c)
+  const user: any = getUser(c)
+  // route publique : les rôles du jeton peuvent être anciens, on relit ceux de la base (statut vu par un admin)
+  if (user) user.roles = await currentRoles(user.id).catch(() => [])
   const encryptedId = c.req.param('id')
   const id = parseInt(utils.decrypt(encryptedId, 'location'))
 
-  const item = await dao.location.get(id, user?.id)
+  const item = await dao.location.get(id, user?.id, await locationService.statusScope(user))
   return c.json(locationService.formatLocation(item))
 })
 
@@ -231,15 +234,19 @@ location.post('/:id/visit', async (c) => {
   const why = status === 'invalid' ? (REASONS.includes(reason) ? reason : 'not_found') : null
 
   await locationService.hasAccess(id, user)
-  await dao.location.setStatus(id, status, r, why, !!danger)
+  const isAdmin = utils.isAdmin(user)
+  // Admin : statut global (tout le monde le voit). Autres : statut personnel, vu par eux, leurs amis et les admins.
+  if (isAdmin) await dao.location.setStatus(id, status, r, why, !!danger)
+  else await dao.location.setPersonalStatus(id, user.id, status, r, why, !!danger)
   await dao.location.addVisit(id, user.id, status, r, why, !!danger)
 
+  // « Bullshit » d'un admin : point masqué pour tout le monde. D'un autre : simple Invalid personnel (masqué pour lui, ses amis, les admins)
   if (why === 'bullshit') {
-    await dao.location.hide(id)
+    if (isAdmin) await dao.location.hide(id)
     return c.json({ removed: true })
   }
 
-  const item = await dao.location.get(id, user.id)
+  const item = await dao.location.get(id, user.id, await locationService.statusScope(user))
   return c.json(item ? locationService.formatLocation(item) : {})
 })
 
@@ -258,6 +265,74 @@ location.delete('/:id', locationMiddleware, async (c) => {
   await dao.location.delete(id)
   await dao.favorite.deleteLocations(id)
 
+  return c.json({})
+})
+
+/**
+ * Notes privées sur un point (superusers → admins)
+ * - un superuser écrit SA note et lit la sienne + celles de ses amis ; un admin lit toutes les notes et peut en supprimer
+ * - les autres utilisateurs n'y ont pas accès
+ */
+const noteAccess = (user: any) => {
+  if (!utils.isSuperUser(user)) throw new HTTPException(403, { message: 'Notes are for superusers' })
+  return utils.isAdmin(user)
+}
+// notes visibles par un superuser : les siennes et celles de ses amis
+const noteScope = async (user: any) => [user.id, ...(await dao.friend.getUserFriends(user.id))]
+const formatNote = (n: any, user: any) => ({
+  id: n.id,
+  body: n.body,
+  createdAt: n.createdAt,
+  updatedAt: n.updatedAt,
+  mine: n.userId === user.id,
+  author: { id: utils.encrypt(n.userId.toString(), 'user'), username: n.username, image: n.image },
+})
+
+/**
+ * GET /location/:id/notes
+ * @returns {Note[]} toutes les notes (admin) ; la sienne et celles de ses amis (superuser)
+ */
+location.get('/:id/notes', async (c) => {
+  const user = c.get('user')
+  const isAdmin = noteAccess(user)
+  const id = parseInt(utils.decrypt(c.req.param('id'), 'location'))
+  const rows = await dao.note.getForLocation(id, isAdmin ? null : await noteScope(user))
+  return c.json(rows.map((n: any) => formatNote(n, user)))
+})
+
+/**
+ * PUT /location/:id/notes
+ * @description Crée ou remplace sa note sur ce point (texte vide = supprime sa note)
+ * body @param {string} body
+ */
+location.put('/:id/notes', async (c) => {
+  const user = c.get('user')
+  const isAdmin = noteAccess(user)
+  const id = parseInt(utils.decrypt(c.req.param('id'), 'location'))
+  const { body } = await c.req.json()
+  const text = typeof body === 'string' ? body.trim().slice(0, 4000) : ''
+
+  if (text) await dao.note.upsert(id, user.id, text)
+  else {
+    const own = (await dao.note.getForLocation(id, [user.id]))[0]
+    if (own) await dao.note.delete(own.id)
+  }
+  const rows = await dao.note.getForLocation(id, isAdmin ? null : await noteScope(user))
+  return c.json(rows.map((n: any) => formatNote(n, user)))
+})
+
+/**
+ * DELETE /location/:id/notes/:noteId
+ * @description Supprime une note : la sienne, ou n'importe laquelle pour un admin
+ */
+location.delete('/:id/notes/:noteId{[0-9]+}', async (c) => {
+  const user = c.get('user')
+  const isAdmin = noteAccess(user)
+  const noteId = parseInt(c.req.param('noteId'))
+  const n = await dao.note.getById(noteId)
+  if (!n) throw new HTTPException(404, { message: 'Note not found' })
+  if (!isAdmin && n.userId !== user.id) throw new HTTPException(403, { message: 'Not your note' })
+  await dao.note.delete(noteId)
   return c.json({})
 })
 

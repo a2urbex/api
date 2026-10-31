@@ -2,6 +2,29 @@ import config from 'config'
 
 let db: db
 
+/**
+ * Statut vu par une personne : le plus récent parmi le statut global (admins, colonnes de location)
+ * et les statuts personnels qu'elle a le droit de voir (statusScope : 'all' pour un admin,
+ * sinon [elle, ses amis] ; vide = global seulement).
+ */
+const statusJoin = (scope: number[] | 'all' | undefined): [string, any[]] => {
+  const who = scope === 'all' ? '' : 'WHERE s.user_id IN (?)'
+  const ids = scope === 'all' ? [] : [scope?.length ? scope : [0]]
+  const sql = `
+    LEFT JOIN (
+      SELECT s.location_id, s.status, s.rating, s.invalid_reason, s.danger, s.visited_at
+      FROM location_status s
+      JOIN (SELECT s.location_id, MAX(s.visited_at) m FROM location_status s ${who} GROUP BY s.location_id) x
+        ON x.location_id = s.location_id AND x.m = s.visited_at
+      ${who}
+    ) ps ON ps.location_id = l.id`
+  return [sql, [...ids, ...ids]]
+}
+const PS_NEWER = '(ps.visited_at IS NOT NULL AND (l.visited_at IS NULL OR ps.visited_at >= l.visited_at))'
+const eff = (col: string) => `(CASE WHEN ${PS_NEWER} THEN ps.${col} ELSE l.${col} END)`
+// MAX() : requêtes groupées par point (only_full_group_by) ; un seul statut retenu par point, l'agrégat ne change rien
+const EFF_FIELDS = `MAX(${eff('status')}) status, MAX(${eff('rating')}) rating, MAX(${eff('invalid_reason')}) invalidReason, MAX(${eff('danger')}) danger, MAX(${eff('visited_at')}) visitedAt`
+
 const location = {
   init: (db1: db) => {
     db = db1
@@ -53,12 +76,12 @@ const location = {
     }
 
     if (filters.statuses?.length) {
-      WHERE += ' AND l.status IN (?)'
+      WHERE += ` AND ${eff('status')} IN (?)`
       params.push(filters.statuses)
     }
 
     if (filters.ratings?.length) {
-      WHERE += ' AND l.rating IN (?)'
+      WHERE += ` AND ${eff('rating')} IN (?)`
       params.push(filters.ratings)
     }
 
@@ -72,7 +95,7 @@ const location = {
       params.push(new Date(filters.dateTo))
     }
 
-    if (!filters.showInvalid) WHERE += " AND l.status <> 'invalid'"
+    if (!filters.showInvalid) WHERE += ` AND ${eff('status')} <> 'invalid'`
 
     if (filters.page) {
       LIMIT += `LIMIT ${config.pageSize * (filters.page - 1)}, ${config.pageSize}`
@@ -81,9 +104,10 @@ const location = {
     return [WHERE, params, LIMIT]
   },
 
-  get: (id: number, userId: number) => {
+  get: (id: number, userId: number, scope?: number[] | 'all') => {
+    const [JOIN, joinParams] = statusJoin(scope)
     const sql = `
-      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, l.status, l.rating, l.invalid_reason invalidReason, l.danger, l.visited_at visitedAt, l.date_add dateAdd, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
+      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, ${EFF_FIELDS}, l.date_add dateAdd, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
         u.username userUsername, u.image userImage, u.roles userRoles,
         GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
@@ -91,11 +115,12 @@ const location = {
       LEFT JOIN user u ON u.id = l.user_id
       LEFT JOIN favorite_location fl ON fl.location_id = l.id
       LEFT JOIN favorite_user fu ON fu.favorite_id = fl.favorite_id
+      ${JOIN}
       WHERE l.id = ? AND l.dedup_removed_at IS NULL
       GROUP BY l.id
     `
 
-    return db.query(sql, [userId, id], 0)
+    return db.query(sql, [userId, ...joinParams, id], 0)
   },
 
   getRaw: (id: number) => {
@@ -105,9 +130,10 @@ const location = {
 
   getList: (filters: SearchFilters, userId: number | null) => {
     const [WHERE, params, LIMIT] = location.getFilters(filters)
+    const [JOIN, joinParams] = statusJoin(filters.statusScope)
 
     const sql = `
-      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, l.status, l.rating, l.invalid_reason invalidReason, l.danger, l.visited_at visitedAt, l.date_add dateAdd, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
+      SELECT l.id, l.user_id userId, l.disabled, l.image, l.image_maps, l.lat, l.lon, l.name, ${EFF_FIELDS}, l.date_add dateAdd, c.name categoryName, c.icon categoryIcon, c.color categoryColor,
         u.username userUsername, u.image userImage, u.roles userRoles,
         GROUP_CONCAT(CASE WHEN fu.user_id = ? THEN fl.favorite_id ELSE NULL END) fids
       FROM location l
@@ -115,34 +141,38 @@ const location = {
       LEFT JOIN user u ON u.id = l.user_id
       LEFT JOIN favorite_location fl ON fl.location_id = l.id
       LEFT JOIN favorite_user fu ON fu.favorite_id = fl.favorite_id
+      ${JOIN}
       WHERE 1 ${WHERE} AND l.lat IS NOT NULL AND l.lon IS NOT NULL AND l.dedup_removed_at IS NULL
       GROUP BY l.id
       ORDER BY id DESC
       ${LIMIT}
     `
 
-    return db.query(sql, [userId, ...params])
+    return db.query(sql, [userId, ...joinParams, ...params])
   },
 
   getCount: (filters: SearchFilters) => {
     const [WHERE, params] = location.getFilters(filters)
+    const [JOIN, joinParams] = statusJoin(filters.statusScope)
 
-    const sql = `SELECT COUNT(id) total FROM location l LEFT JOIN favorite_location fl ON fl.location_id = l.id WHERE 1 ${WHERE} AND l.dedup_removed_at IS NULL`
+    const sql = `SELECT COUNT(DISTINCT l.id) total FROM location l LEFT JOIN favorite_location fl ON fl.location_id = l.id ${JOIN} WHERE 1 ${WHERE} AND l.dedup_removed_at IS NULL`
 
-    return db.query(sql, params, 0)
+    return db.query(sql, [...joinParams, ...params], 0)
   },
 
   // Weekly import counts (Monday-based weeks) for the date slider histogram
   getImportHistogram: (filters: SearchFilters) => {
     const [WHERE, params] = location.getFilters({ ...filters, dateFrom: undefined, dateTo: undefined, page: undefined })
+    const [JOIN, joinParams] = statusJoin(filters.statusScope)
     const sql = `
-      SELECT DATE_FORMAT(DATE_SUB(DATE(l.date_add), INTERVAL WEEKDAY(l.date_add) DAY), '%Y-%m-%d') week, COUNT(*) total
+      SELECT DATE_FORMAT(DATE_SUB(DATE(l.date_add), INTERVAL WEEKDAY(l.date_add) DAY), '%Y-%m-%d') week, COUNT(DISTINCT l.id) total
       FROM location l
+      ${JOIN}
       WHERE 1 ${WHERE} AND l.date_add IS NOT NULL AND l.lat IS NOT NULL AND l.dedup_removed_at IS NULL
       GROUP BY week
       ORDER BY week
     `
-    return db.query(sql, params)
+    return db.query(sql, [...joinParams, ...params])
   },
 
   getUserList: (userId: number) => {
@@ -256,6 +286,14 @@ const location = {
   // Masque un point pour tout le monde (même mécanisme que la déduplication, récupérable)
   hide: (id: number) => {
     return db.query(`UPDATE location SET dedup_removed_at = NOW() WHERE id = ?`, [id])
+  },
+
+  // Statut personnel (non-admin) : remplace le précédent de cette personne sur ce point
+  setPersonalStatus: (id: number, userId: number, status: string, rating: string | null, reason: string | null, danger: boolean) => {
+    const sql = `INSERT INTO location_status (location_id, user_id, status, rating, invalid_reason, danger, visited_at)
+                 VALUES (?, ?, ?, ?, ?, ?, NOW())
+                 ON DUPLICATE KEY UPDATE status = VALUES(status), rating = VALUES(rating), invalid_reason = VALUES(invalid_reason), danger = VALUES(danger), visited_at = NOW()`
+    return db.query(sql, [id, userId, status, rating, reason, danger ? 1 : 0])
   },
 
   addVisit: (id: number, userId: number, status: string, rating: string | null, reason: string | null, danger: boolean) => {
