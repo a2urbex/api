@@ -6,6 +6,7 @@ import favorite from './favorite'
 import friend from './friend'
 import importJob from './import'
 import location from './location'
+import note from './note'
 import user from './user'
 import source from './source'
 import token from './token'
@@ -21,6 +22,7 @@ export default {
   friend,
   importJob,
   location,
+  note,
   user,
   source,
   token,

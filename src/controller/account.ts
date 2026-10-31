@@ -70,6 +70,7 @@ account.get('/', async (c) => {
     username: userData.username,
     image: userData.image,
     isAdmin: utils.isAdmin(user),
+    isSuperUser: utils.isSuperUser(user), // notes privées sur les points
   })
 })
 
