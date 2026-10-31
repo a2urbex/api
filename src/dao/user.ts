@@ -6,7 +6,7 @@ const user = {
   },
 
   get: (id: number) => {
-    const sql = `SELECT id, email, username, about, youtube, tiktok, instagram, image, banner, roles FROM user WHERE id = ?`
+    const sql = `SELECT id, email, username, about, youtube, tiktok, instagram, image, banner, roles, last_active_at, hide_activity FROM user WHERE id = ?`
     return db.query(sql, [id], 0)
   },
 
@@ -37,8 +37,18 @@ const user = {
   },
 
   getAll: () => {
-    const sql = `SELECT id, image, username, email, roles, pending FROM user`
+    const sql = `SELECT id, image, username, email, roles, pending, last_active_at FROM user`
     return db.query(sql)
+  },
+
+  touchActive: (id: number) => {
+    const sql = `UPDATE user SET last_active_at = NOW() WHERE id = ?`
+    return db.query(sql, [id])
+  },
+
+  setHideActivity: (id: number, hide: boolean) => {
+    const sql = `UPDATE user SET hide_activity = ? WHERE id = ?`
+    return db.query(sql, [hide ? 1 : 0, id])
   },
 
   getByUsername: (username: string) => {

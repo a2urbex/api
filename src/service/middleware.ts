@@ -8,11 +8,22 @@ import utils from '@core/utils'
 import dao from 'dao'
 import { currentRoles } from 'service/roles'
 
+// Dernière activité : au plus une écriture par personne et par minute
+const ACTIVE_TTL = 60000
+const lastTouch = new Map<number, number>()
+const touchActive = (userId: number) => {
+  const now = Date.now()
+  if (now - (lastTouch.get(userId) || 0) < ACTIVE_TTL) return
+  lastTouch.set(userId, now)
+  dao.user.touchActive(userId).catch(() => {})
+}
+
 // AUTH
 const authMiddleware = createMiddleware(async (c, next) => {
   const user: any = getUser(c, true)
   user.roles = await currentRoles(user.id)
   c.set('user', user)
+  touchActive(user.id)
 
   return next()
 })

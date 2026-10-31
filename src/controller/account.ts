@@ -7,6 +7,7 @@ import utils from '@core/utils'
 import config from 'config'
 
 import { authMiddleware, getUser } from 'service/middleware'
+import { currentRoles } from 'service/roles'
 import geocoderService from 'service/geocoder'
 import { countryFromIp } from 'service/ipCountry'
 
@@ -26,10 +27,17 @@ account.get('/:id{[0-9a-z]{24,}}', async (c) => {
   const id = parseInt(utils.decrypt(encryptedId, 'user'))
 
   const userData = await dao.user.get(id)
+  if (!userData) throw new HTTPException(404, { message: 'User not found' })
   const locationCount = await dao.location.getUserCount(id)
   const friendCount = await dao.friend.getUserFriendsCount(id)
   const isFriend = await dao.friend.isFriend(user?.id, id)
   const images = await dao.location.getImages(id)
+
+  // « En ligne / vu il y a » : masqué si la personne l'a choisi, sauf pour elle-même et les admins
+  const isSelf = user?.id === id
+  const viewerIsAdmin = user ? utils.isAdmin({ ...user, roles: await currentRoles(user.id).catch(() => []) }) : false
+  const hideActivity = !!Number(userData.hide_activity)
+  const showActivity = !hideActivity || isSelf || viewerIsAdmin
 
   return c.json({
     username: userData.username,
@@ -46,6 +54,8 @@ account.get('/:id{[0-9a-z]{24,}}', async (c) => {
     roles: Array.isArray(userData.roles)
       ? userData.roles
       : JSON.parse(userData.roles || '[]'),
+    lastActiveAt: showActivity ? userData.last_active_at : null,
+    ...((isSelf || viewerIsAdmin) && { hideActivity }),
   })
 })
 
@@ -107,6 +117,7 @@ account.get('/details', async (c) => {
  * formData @param {string} instagram - Instagram
  * formData @param {File} image - Optional - Image
  * formData @param {File} banner - Optional - Banner
+ * formData @param {string} hideActivity - Optional - 'true' hides online / last seen from other users (admins still see it)
  */
 account.put('/', async (c) => {
   const user = c.get('user')
@@ -128,6 +139,7 @@ account.put('/', async (c) => {
   }
 
   await dao.user.update(user.id, body.about, body.youtube, body.tiktok, body.instagram, image, banner)
+  if (body.hideActivity !== undefined) await dao.user.setHideActivity(user.id, body.hideActivity === 'true')
 
   return c.json({})
 })

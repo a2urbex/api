@@ -13,12 +13,15 @@ const user = new Hono<{ Bindings: Bindings; Variables: Variables }>()
 user.use('*', authMiddleware)
 
 user.get('/', async (c) => {
+  const isAdmin = utils.isAdmin(c.get('user'))
   const users = await dao.user.getAll()
 
-  const formattedUsers = users.map((user: any) => ({
+  const formattedUsers = users.map(({ last_active_at, ...user }: any) => ({
     ...userService.formatUser(user),
     roles: JSON.parse(user.roles),
     pending: Number(user.pending),
+    // activité : réservée aux admins
+    ...(isAdmin && { lastActiveAt: last_active_at }),
   }))
 
   return c.json(formattedUsers)
