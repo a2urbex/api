@@ -9,4 +9,4 @@ CREATE TABLE IF NOT EXISTS location_note (
   updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
   UNIQUE KEY ux_location_user (location_id, user_id),
   KEY ix_location (location_id)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

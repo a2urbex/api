@@ -10,4 +10,4 @@ CREATE TABLE IF NOT EXISTS location_status (
   visited_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (location_id, user_id),
   KEY ix_user (user_id)
-);
+) DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
